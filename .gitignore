@@ -11,6 +11,10 @@ logs/
 KB/
 notes/
 
+# Scratch directories the bench creates and removes.
+.bench-corpus-*/
+.bench-verify-*/
+
 __pycache__/
 *.py[cod]
 .DS_Store

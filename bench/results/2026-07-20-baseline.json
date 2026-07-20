@@ -1,0 +1,1170 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-07-20T14:26:35Z",
+  "date": "2026-07-20",
+  "profile": {
+    "schema_version": 1,
+    "name": "baseline",
+    "kind": "local",
+    "title": "Local Chroma + ONNX MiniLM, current production chunking",
+    "description": "Reproduces the toolkit's shipped behaviour exactly. Its chunking block repeats the module defaults of index_toolbox.py, so selecting this profile is a no-op with respect to the manifest.",
+    "collection": "toolbox",
+    "endpoint": null,
+    "embedder": {
+      "provider": "chroma-onnx",
+      "model": "all-MiniLM-L6-v2",
+      "dimensions": 384,
+      "space": "cosine",
+      "normalize": true
+    },
+    "chunking": {
+      "strategy": "heading-aware",
+      "max_chars": 1200,
+      "overlap_chars": 150,
+      "min_chars": 60
+    },
+    "retrieval": {
+      "k": 5
+    }
+  },
+  "collection": "bench__baseline",
+  "harness": {
+    "runs": 10,
+    "k": 5,
+    "queries": [
+      "how does the harvester schedule its lattice passes",
+      "quorum drift between the outer and inner relay",
+      "what does the ledger say about pumice throughput",
+      "cost of a cold restart for the ferrite pipeline",
+      "marker phrase zorbium quintal beacon"
+    ],
+    "corpus": {
+      "files": 7,
+      "chars": 50699,
+      "scratch": "scratch-note.md",
+      "planted_facts": 18,
+      "verified": true,
+      "ground_truth": "ground-truth.json",
+      "kind": "synthetic",
+      "seed": 20260720,
+      "source": "shipped: bench/corpus (verified against the generator)"
+    },
+    "network": "blocked",
+    "blocked_connect_attempts": 0,
+    "blocked_connect_targets": [],
+    "environment": {
+      "python": "3.12.7",
+      "chromadb": "1.5.9",
+      "onnxruntime": "1.27.0",
+      "numpy": "2.5.1",
+      "os": "macOS 26.5.2 (Darwin 25.5.0)",
+      "platform": "darwin",
+      "arch": "arm64",
+      "cpu": "Apple M2 Pro",
+      "cores_physical": 12,
+      "cores_logical": 12,
+      "memory_gb": 16.0,
+      "collected": "hardware and library versions only; no hostname, user or path"
+    }
+  },
+  "chunking_observed": {
+    "files": 7,
+    "chunks": 66,
+    "chars_total": 54369,
+    "chars_mean": 823.8,
+    "chars_max": 1211
+  },
+  "indexed_chunks": 66,
+  "ops": {
+    "create": {
+      "unit": "ms per full index build",
+      "n": 10,
+      "cold_ms": 1093.141,
+      "warm_p50_ms": 1082.372,
+      "p50_ms": 1083.942,
+      "p95_ms": 1092.388,
+      "p99_ms": 1092.99,
+      "min_ms": 1072.281,
+      "max_ms": 1093.141,
+      "mean_ms": 1083.642,
+      "stdev_ms": 6.224,
+      "samples_ms": [
+        1093.141,
+        1085.513,
+        1091.468,
+        1077.615,
+        1088.183,
+        1086.639,
+        1072.281,
+        1080.865,
+        1082.372,
+        1078.343
+      ],
+      "detail": {
+        "files": 7,
+        "chunks": 66
+      }
+    },
+    "read": {
+      "unit": "ms per pass over 5 fixed queries, k=5",
+      "n": 10,
+      "cold_ms": 147.776,
+      "warm_p50_ms": 79.028,
+      "p50_ms": 79.144,
+      "p95_ms": 117.292,
+      "p99_ms": 141.68,
+      "min_ms": 78.055,
+      "max_ms": 147.776,
+      "mean_ms": 85.85,
+      "stdev_ms": 20.651,
+      "samples_ms": [
+        147.776,
+        79.416,
+        80.033,
+        78.569,
+        79.028,
+        78.383,
+        79.26,
+        78.299,
+        78.055,
+        79.682
+      ],
+      "per_query": {
+        "how does the harvester schedule its lattice passes": {
+          "unit": "ms per query, k=5",
+          "n": 10,
+          "cold_ms": 83.696,
+          "warm_p50_ms": 15.608,
+          "p50_ms": 15.611,
+          "p95_ms": 53.105,
+          "p99_ms": 77.578,
+          "min_ms": 15.418,
+          "max_ms": 83.696,
+          "mean_ms": 22.381,
+          "stdev_ms": 20.439,
+          "samples_ms": [
+            83.696,
+            15.63,
+            15.434,
+            15.614,
+            15.608,
+            15.682,
+            15.48,
+            15.418,
+            15.53,
+            15.716
+          ]
+        },
+        "quorum drift between the outer and inner relay": {
+          "unit": "ms per query, k=5",
+          "n": 10,
+          "cold_ms": 16.016,
+          "warm_p50_ms": 15.905,
+          "p50_ms": 15.946,
+          "p95_ms": 16.305,
+          "p99_ms": 16.349,
+          "min_ms": 15.471,
+          "max_ms": 16.36,
+          "mean_ms": 15.956,
+          "stdev_ms": 0.254,
+          "samples_ms": [
+            16.016,
+            15.902,
+            16.36,
+            15.678,
+            15.471,
+            15.804,
+            15.905,
+            16.237,
+            16.2,
+            15.987
+          ]
+        },
+        "what does the ledger say about pumice throughput": {
+          "unit": "ms per query, k=5",
+          "n": 10,
+          "cold_ms": 15.761,
+          "warm_p50_ms": 15.674,
+          "p50_ms": 15.681,
+          "p95_ms": 16.041,
+          "p99_ms": 16.063,
+          "min_ms": 15.413,
+          "max_ms": 16.068,
+          "mean_ms": 15.701,
+          "stdev_ms": 0.201,
+          "samples_ms": [
+            15.761,
+            16.008,
+            16.068,
+            15.674,
+            15.639,
+            15.689,
+            15.649,
+            15.413,
+            15.419,
+            15.691
+          ]
+        },
+        "cost of a cold restart for the ferrite pipeline": {
+          "unit": "ms per query, k=5",
+          "n": 10,
+          "cold_ms": 15.874,
+          "warm_p50_ms": 15.902,
+          "p50_ms": 15.888,
+          "p95_ms": 16.422,
+          "p99_ms": 16.464,
+          "min_ms": 15.373,
+          "max_ms": 16.475,
+          "mean_ms": 15.9,
+          "stdev_ms": 0.326,
+          "samples_ms": [
+            15.874,
+            15.847,
+            16.475,
+            15.902,
+            16.358,
+            15.562,
+            15.978,
+            15.373,
+            15.587,
+            16.043
+          ]
+        },
+        "marker phrase zorbium quintal beacon": {
+          "unit": "ms per query, k=5",
+          "n": 10,
+          "cold_ms": 16.424,
+          "warm_p50_ms": 15.855,
+          "p50_ms": 15.9,
+          "p95_ms": 16.343,
+          "p99_ms": 16.408,
+          "min_ms": 15.315,
+          "max_ms": 16.424,
+          "mean_ms": 15.908,
+          "stdev_ms": 0.319,
+          "samples_ms": [
+            16.424,
+            16.025,
+            15.692,
+            15.698,
+            15.946,
+            15.643,
+            16.244,
+            15.855,
+            15.315,
+            16.24
+          ]
+        }
+      }
+    },
+    "update": {
+      "unit": "ms per re-index of one changed note",
+      "n": 10,
+      "cold_ms": 166.634,
+      "warm_p50_ms": 111.597,
+      "p50_ms": 112.13,
+      "p95_ms": 146.402,
+      "p99_ms": 162.587,
+      "min_ms": 94.502,
+      "max_ms": 166.634,
+      "mean_ms": 112.551,
+      "stdev_ms": 20.099,
+      "samples_ms": [
+        166.634,
+        112.663,
+        100.028,
+        113.605,
+        94.801,
+        111.597,
+        94.502,
+        112.681,
+        97.32,
+        121.675
+      ],
+      "detail": {
+        "chunks_rewritten_per_run": [
+          6,
+          7,
+          6,
+          7,
+          6,
+          7,
+          6,
+          7,
+          6,
+          7
+        ]
+      }
+    },
+    "delete": {
+      "unit": "ms per removal of one note",
+      "n": 10,
+      "cold_ms": 6.301,
+      "warm_p50_ms": 7.143,
+      "p50_ms": 7.129,
+      "p95_ms": 8.143,
+      "p99_ms": 8.329,
+      "min_ms": 6.301,
+      "max_ms": 8.375,
+      "mean_ms": 7.213,
+      "stdev_ms": 0.575,
+      "samples_ms": [
+        6.301,
+        6.711,
+        7.143,
+        6.668,
+        7.114,
+        7.86,
+        8.375,
+        7.051,
+        7.414,
+        7.495
+      ],
+      "consistency": {
+        "unit": "ms until the note stops appearing in results",
+        "n": 10,
+        "cold_ms": 16.006,
+        "warm_p50_ms": 16.323,
+        "p50_ms": 16.255,
+        "p95_ms": 16.999,
+        "p99_ms": 17.31,
+        "min_ms": 16.006,
+        "max_ms": 17.388,
+        "mean_ms": 16.339,
+        "stdev_ms": 0.382,
+        "samples_ms": [
+          16.006,
+          16.144,
+          16.523,
+          16.188,
+          16.352,
+          16.059,
+          16.064,
+          16.344,
+          16.323,
+          17.388
+        ]
+      },
+      "detail": {
+        "per_run": [
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          },
+          {
+            "chunks_deleted": 10,
+            "chunks_remaining": 0,
+            "probe_k": 25,
+            "probe_retrieved_before_delete": true,
+            "probe_hits_from_deleted_note": 0,
+            "probe_attempts": 1
+          }
+        ]
+      }
+    }
+  },
+  "quality": {
+    "measured": true,
+    "metric": "recall@k, document-level; MRR; nDCG@10",
+    "relevance": "a retrieved chunk is a hit when its source file is in the query's relevant set; labels are never keyed to chunk ids",
+    "k_ladder": [
+      1,
+      3,
+      5,
+      10
+    ],
+    "k_semantics": "k counts retrieved chunks (retriever depth); a document is retrieved when any of those chunks has it as its source",
+    "retrieval_depth": 10,
+    "timed": false,
+    "measured_after": "all four timed ops; excluded from every latency sample",
+    "ground_truth": {
+      "origin": "planted at corpus generation",
+      "loaded_from": "corpus/ground-truth.json",
+      "seed": 20260720,
+      "derived_from_retriever_output": false,
+      "queries": 8,
+      "corpus_documents": 7,
+      "relevant_per_query": {
+        "min": 2,
+        "max": 3,
+        "mean": 2.25
+      },
+      "planting": [
+        {
+          "topic": "thernwick-governor",
+          "source": "note-00.md",
+          "section": "ferrite 1",
+          "section_chars_before": 2627,
+          "section_chars_after": 2836
+        },
+        {
+          "topic": "pellagrove-damper",
+          "source": "note-00.md",
+          "section": "quorum 5",
+          "section_chars_before": 2627,
+          "section_chars_after": 2829
+        },
+        {
+          "topic": "vashtrin-escapement",
+          "source": "note-00.md",
+          "section": "ferrite 0",
+          "section_chars_before": 429,
+          "section_chars_after": 622
+        },
+        {
+          "topic": "thernwick-governor",
+          "source": "note-01.md",
+          "section": "solstice 5",
+          "section_chars_before": 1768,
+          "section_chars_after": 1977
+        },
+        {
+          "topic": "pellagrove-manifold",
+          "source": "note-01.md",
+          "section": "ferrite 1",
+          "section_chars_before": 1164,
+          "section_chars_after": 1369
+        },
+        {
+          "topic": "ganthorpe-diaphragm",
+          "source": "note-01.md",
+          "section": "ferrite 4",
+          "section_chars_before": 1164,
+          "section_chars_after": 1344
+        },
+        {
+          "topic": "thernwick-rail",
+          "source": "note-02.md",
+          "section": "thicket 2",
+          "section_chars_before": 2631,
+          "section_chars_after": 2824
+        },
+        {
+          "topic": "pellagrove-damper",
+          "source": "note-02.md",
+          "section": "vellum 0",
+          "section_chars_before": 1772,
+          "section_chars_after": 1974
+        },
+        {
+          "topic": "ganthorpe-wickstay",
+          "source": "note-02.md",
+          "section": "vellum 4",
+          "section_chars_before": 1772,
+          "section_chars_after": 1971
+        },
+        {
+          "topic": "thernwick-rail",
+          "source": "note-03.md",
+          "section": "ripple 0",
+          "section_chars_before": 1772,
+          "section_chars_after": 1965
+        },
+        {
+          "topic": "pellagrove-manifold",
+          "source": "note-03.md",
+          "section": "cistern 5",
+          "section_chars_before": 1166,
+          "section_chars_after": 1371
+        },
+        {
+          "topic": "vashtrin-escapement",
+          "source": "note-03.md",
+          "section": "bellows 3",
+          "section_chars_before": 788,
+          "section_chars_after": 981
+        },
+        {
+          "topic": "vashtrin-buffer",
+          "source": "note-04.md",
+          "section": "thicket 4",
+          "section_chars_before": 2625,
+          "section_chars_after": 2821
+        },
+        {
+          "topic": "pellagrove-damper",
+          "source": "note-04.md",
+          "section": "harvester 0",
+          "section_chars_before": 1164,
+          "section_chars_after": 1366
+        },
+        {
+          "topic": "ganthorpe-diaphragm",
+          "source": "note-04.md",
+          "section": "relay 3",
+          "section_chars_before": 792,
+          "section_chars_after": 972
+        },
+        {
+          "topic": "vashtrin-buffer",
+          "source": "note-05.md",
+          "section": "pillar 0",
+          "section_chars_before": 2627,
+          "section_chars_after": 2823
+        },
+        {
+          "topic": "pellagrove-manifold",
+          "source": "note-05.md",
+          "section": "vellum 1",
+          "section_chars_before": 1768,
+          "section_chars_after": 1973
+        },
+        {
+          "topic": "ganthorpe-wickstay",
+          "source": "note-05.md",
+          "section": "cadmium 4",
+          "section_chars_before": 1163,
+          "section_chars_after": 1362
+        }
+      ],
+      "facts_intact_in_index": "18/18"
+    },
+    "aggregate": {
+      "queries": 8,
+      "recall@1": 0.458333,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "recall@10": 1.0,
+      "mrr": 1.0,
+      "ndcg@10": 1.0
+    },
+    "per_query": [
+      {
+        "relevant": [
+          "note-00.md",
+          "note-01.md"
+        ],
+        "retrieved_sources": [
+          "note-01.md",
+          "note-00.md",
+          "note-03.md",
+          "note-04.md",
+          "note-05.md",
+          "note-03.md",
+          "note-01.md",
+          "note-00.md",
+          "note-02.md",
+          "note-02.md"
+        ],
+        "distinct_documents_retrieved": 6,
+        "recall": {
+          "recall@1": 0.5,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "recall@10": 1.0
+        },
+        "first_relevant_rank": 1,
+        "rr": 1.0,
+        "ndcg@10": 1.0,
+        "id": "thernwick-governor",
+        "query": "what pressure does the thernwick governor hold at cold start"
+      },
+      {
+        "relevant": [
+          "note-02.md",
+          "note-03.md"
+        ],
+        "retrieved_sources": [
+          "note-03.md",
+          "note-02.md",
+          "note-04.md",
+          "note-05.md",
+          "note-02.md",
+          "note-00.md",
+          "note-04.md",
+          "note-03.md",
+          "note-01.md",
+          "note-01.md"
+        ],
+        "distinct_documents_retrieved": 6,
+        "recall": {
+          "recall@1": 0.5,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "recall@10": 1.0
+        },
+        "first_relevant_rank": 1,
+        "rr": 1.0,
+        "ndcg@10": 1.0,
+        "id": "thernwick-rail",
+        "query": "how often is the thernwick rail re-shimmed"
+      },
+      {
+        "relevant": [
+          "note-04.md",
+          "note-05.md"
+        ],
+        "retrieved_sources": [
+          "note-04.md",
+          "note-05.md",
+          "note-01.md",
+          "note-00.md",
+          "note-03.md",
+          "note-01.md",
+          "note-03.md",
+          "note-01.md",
+          "note-04.md",
+          "note-00.md"
+        ],
+        "distinct_documents_retrieved": 5,
+        "recall": {
+          "recall@1": 0.5,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "recall@10": 1.0
+        },
+        "first_relevant_rank": 1,
+        "rr": 1.0,
+        "ndcg@10": 1.0,
+        "id": "vashtrin-buffer",
+        "query": "what temperature limit applies to the vashtrin buffer"
+      },
+      {
+        "relevant": [
+          "note-00.md",
+          "note-02.md",
+          "note-04.md"
+        ],
+        "retrieved_sources": [
+          "note-04.md",
+          "note-02.md",
+          "note-00.md",
+          "note-01.md",
+          "note-03.md",
+          "note-00.md",
+          "note-01.md",
+          "note-00.md",
+          "note-01.md",
+          "note-04.md"
+        ],
+        "distinct_documents_retrieved": 5,
+        "recall": {
+          "recall@1": 0.333333,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "recall@10": 1.0
+        },
+        "first_relevant_rank": 1,
+        "rr": 1.0,
+        "ndcg@10": 1.0,
+        "id": "pellagrove-damper",
+        "query": "why does the pellagrove damper need a second anchor"
+      },
+      {
+        "relevant": [
+          "note-01.md",
+          "note-03.md",
+          "note-05.md"
+        ],
+        "retrieved_sources": [
+          "note-01.md",
+          "note-03.md",
+          "note-05.md",
+          "note-05.md",
+          "scratch-note.md",
+          "note-01.md",
+          "note-01.md",
+          "note-00.md",
+          "note-04.md",
+          "note-02.md"
+        ],
+        "distinct_documents_retrieved": 7,
+        "recall": {
+          "recall@1": 0.333333,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "recall@10": 1.0
+        },
+        "first_relevant_rank": 1,
+        "rr": 1.0,
+        "ndcg@10": 1.0,
+        "id": "pellagrove-manifold",
+        "query": "what is the bleed order for the pellagrove manifold"
+      },
+      {
+        "relevant": [
+          "note-00.md",
+          "note-03.md"
+        ],
+        "retrieved_sources": [
+          "note-03.md",
+          "note-00.md",
+          "note-04.md",
+          "note-05.md",
+          "note-03.md",
+          "note-03.md",
+          "note-01.md",
+          "note-01.md",
+          "scratch-note.md",
+          "note-02.md"
+        ],
+        "distinct_documents_retrieved": 7,
+        "recall": {
+          "recall@1": 0.5,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "recall@10": 1.0
+        },
+        "first_relevant_rank": 1,
+        "rr": 1.0,
+        "ndcg@10": 1.0,
+        "id": "vashtrin-escapement",
+        "query": "what tool releases the vashtrin escapement"
+      },
+      {
+        "relevant": [
+          "note-01.md",
+          "note-04.md"
+        ],
+        "retrieved_sources": [
+          "note-04.md",
+          "note-01.md",
+          "note-02.md",
+          "note-05.md",
+          "scratch-note.md",
+          "note-01.md",
+          "note-01.md",
+          "note-04.md",
+          "note-01.md",
+          "note-00.md"
+        ],
+        "distinct_documents_retrieved": 6,
+        "recall": {
+          "recall@1": 0.5,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "recall@10": 1.0
+        },
+        "first_relevant_rank": 1,
+        "rr": 1.0,
+        "ndcg@10": 1.0,
+        "id": "ganthorpe-diaphragm",
+        "query": "what causes the ganthorpe diaphragm to blister"
+      },
+      {
+        "relevant": [
+          "note-02.md",
+          "note-05.md"
+        ],
+        "retrieved_sources": [
+          "note-02.md",
+          "note-05.md",
+          "note-04.md",
+          "note-03.md",
+          "note-01.md",
+          "note-01.md",
+          "note-01.md",
+          "scratch-note.md",
+          "note-03.md",
+          "note-04.md"
+        ],
+        "distinct_documents_retrieved": 6,
+        "recall": {
+          "recall@1": 0.5,
+          "recall@3": 1.0,
+          "recall@5": 1.0,
+          "recall@10": 1.0
+        },
+        "first_relevant_rank": 1,
+        "rr": 1.0,
+        "ndcg@10": 1.0,
+        "id": "ganthorpe-wickstay",
+        "query": "how is the ganthorpe wickstay tensioned"
+      }
+    ],
+    "controls": {
+      "unanswerable_query": {
+        "purpose": "a query no document answers must score 0",
+        "query": "what clearance does the thernwick escutcheon take when it is refaced",
+        "relevant": [],
+        "denominator": 1,
+        "result": {
+          "relevant": [],
+          "retrieved_sources": [
+            "note-00.md",
+            "note-05.md",
+            "note-02.md",
+            "note-03.md",
+            "note-02.md",
+            "note-01.md",
+            "note-03.md",
+            "note-04.md",
+            "note-01.md",
+            "note-01.md"
+          ],
+          "distinct_documents_retrieved": 6,
+          "recall": {
+            "recall@1": 0.0,
+            "recall@3": 0.0,
+            "recall@5": 0.0,
+            "recall@10": 0.0
+          },
+          "first_relevant_rank": null,
+          "rr": 0.0,
+          "ndcg@10": 0.0,
+          "query": "what clearance does the thernwick escutcheon take when it is refaced"
+        },
+        "scored_zero": true
+      },
+      "shuffled_ground_truth": {
+        "purpose": "same retrieved results, labels deranged onto document-disjoint sets; the aggregate must drop",
+        "permutation": {
+          "thernwick-governor": "thernwick-rail",
+          "thernwick-rail": "thernwick-governor",
+          "vashtrin-buffer": "vashtrin-escapement",
+          "pellagrove-damper": "pellagrove-manifold",
+          "pellagrove-manifold": "pellagrove-damper",
+          "vashtrin-escapement": "vashtrin-buffer",
+          "ganthorpe-diaphragm": "ganthorpe-wickstay",
+          "ganthorpe-wickstay": "ganthorpe-diaphragm"
+        },
+        "document_overlap_with_truth": 0,
+        "aggregate": {
+          "queries": 8,
+          "recall@1": 0.0,
+          "recall@3": 0.25,
+          "recall@5": 0.645833,
+          "recall@10": 0.958333,
+          "mrr": 0.265625,
+          "ndcg@10": 0.506961
+        },
+        "per_query": [
+          {
+            "relevant": [
+              "note-02.md",
+              "note-03.md"
+            ],
+            "retrieved_sources": [
+              "note-01.md",
+              "note-00.md",
+              "note-03.md",
+              "note-04.md",
+              "note-05.md",
+              "note-03.md",
+              "note-01.md",
+              "note-00.md",
+              "note-02.md",
+              "note-02.md"
+            ],
+            "distinct_documents_retrieved": 6,
+            "recall": {
+              "recall@1": 0.0,
+              "recall@3": 0.5,
+              "recall@5": 0.5,
+              "recall@10": 1.0
+            },
+            "first_relevant_rank": 3,
+            "rr": 0.333333,
+            "ndcg@10": 0.524981,
+            "id": "thernwick-governor",
+            "query": "what pressure does the thernwick governor hold at cold start",
+            "labelled_as": "thernwick-rail"
+          },
+          {
+            "relevant": [
+              "note-00.md",
+              "note-01.md"
+            ],
+            "retrieved_sources": [
+              "note-03.md",
+              "note-02.md",
+              "note-04.md",
+              "note-05.md",
+              "note-02.md",
+              "note-00.md",
+              "note-04.md",
+              "note-03.md",
+              "note-01.md",
+              "note-01.md"
+            ],
+            "distinct_documents_retrieved": 6,
+            "recall": {
+              "recall@1": 0.0,
+              "recall@3": 0.0,
+              "recall@5": 0.0,
+              "recall@10": 1.0
+            },
+            "first_relevant_rank": 6,
+            "rr": 0.166667,
+            "ndcg@10": 0.455605,
+            "id": "thernwick-rail",
+            "query": "how often is the thernwick rail re-shimmed",
+            "labelled_as": "thernwick-governor"
+          },
+          {
+            "relevant": [
+              "note-00.md",
+              "note-03.md"
+            ],
+            "retrieved_sources": [
+              "note-04.md",
+              "note-05.md",
+              "note-01.md",
+              "note-00.md",
+              "note-03.md",
+              "note-01.md",
+              "note-03.md",
+              "note-01.md",
+              "note-04.md",
+              "note-00.md"
+            ],
+            "distinct_documents_retrieved": 5,
+            "recall": {
+              "recall@1": 0.0,
+              "recall@3": 0.0,
+              "recall@5": 1.0,
+              "recall@10": 1.0
+            },
+            "first_relevant_rank": 4,
+            "rr": 0.25,
+            "ndcg@10": 0.501266,
+            "id": "vashtrin-buffer",
+            "query": "what temperature limit applies to the vashtrin buffer",
+            "labelled_as": "vashtrin-escapement"
+          },
+          {
+            "relevant": [
+              "note-01.md",
+              "note-03.md",
+              "note-05.md"
+            ],
+            "retrieved_sources": [
+              "note-04.md",
+              "note-02.md",
+              "note-00.md",
+              "note-01.md",
+              "note-03.md",
+              "note-00.md",
+              "note-01.md",
+              "note-00.md",
+              "note-01.md",
+              "note-04.md"
+            ],
+            "distinct_documents_retrieved": 5,
+            "recall": {
+              "recall@1": 0.0,
+              "recall@3": 0.0,
+              "recall@5": 0.666667,
+              "recall@10": 0.666667
+            },
+            "first_relevant_rank": 4,
+            "rr": 0.25,
+            "ndcg@10": 0.383649,
+            "id": "pellagrove-damper",
+            "query": "why does the pellagrove damper need a second anchor",
+            "labelled_as": "pellagrove-manifold"
+          },
+          {
+            "relevant": [
+              "note-00.md",
+              "note-02.md",
+              "note-04.md"
+            ],
+            "retrieved_sources": [
+              "note-01.md",
+              "note-03.md",
+              "note-05.md",
+              "note-05.md",
+              "scratch-note.md",
+              "note-01.md",
+              "note-01.md",
+              "note-00.md",
+              "note-04.md",
+              "note-02.md"
+            ],
+            "distinct_documents_retrieved": 7,
+            "recall": {
+              "recall@1": 0.0,
+              "recall@3": 0.0,
+              "recall@5": 0.0,
+              "recall@10": 1.0
+            },
+            "first_relevant_rank": 8,
+            "rr": 0.125,
+            "ndcg@10": 0.505128,
+            "id": "pellagrove-manifold",
+            "query": "what is the bleed order for the pellagrove manifold",
+            "labelled_as": "pellagrove-damper"
+          },
+          {
+            "relevant": [
+              "note-04.md",
+              "note-05.md"
+            ],
+            "retrieved_sources": [
+              "note-03.md",
+              "note-00.md",
+              "note-04.md",
+              "note-05.md",
+              "note-03.md",
+              "note-03.md",
+              "note-01.md",
+              "note-01.md",
+              "scratch-note.md",
+              "note-02.md"
+            ],
+            "distinct_documents_retrieved": 7,
+            "recall": {
+              "recall@1": 0.0,
+              "recall@3": 0.5,
+              "recall@5": 1.0,
+              "recall@10": 1.0
+            },
+            "first_relevant_rank": 3,
+            "rr": 0.333333,
+            "ndcg@10": 0.570642,
+            "id": "vashtrin-escapement",
+            "query": "what tool releases the vashtrin escapement",
+            "labelled_as": "vashtrin-buffer"
+          },
+          {
+            "relevant": [
+              "note-02.md",
+              "note-05.md"
+            ],
+            "retrieved_sources": [
+              "note-04.md",
+              "note-01.md",
+              "note-02.md",
+              "note-05.md",
+              "scratch-note.md",
+              "note-01.md",
+              "note-01.md",
+              "note-04.md",
+              "note-01.md",
+              "note-00.md"
+            ],
+            "distinct_documents_retrieved": 6,
+            "recall": {
+              "recall@1": 0.0,
+              "recall@3": 0.5,
+              "recall@5": 1.0,
+              "recall@10": 1.0
+            },
+            "first_relevant_rank": 3,
+            "rr": 0.333333,
+            "ndcg@10": 0.570642,
+            "id": "ganthorpe-diaphragm",
+            "query": "what causes the ganthorpe diaphragm to blister",
+            "labelled_as": "ganthorpe-wickstay"
+          },
+          {
+            "relevant": [
+              "note-01.md",
+              "note-04.md"
+            ],
+            "retrieved_sources": [
+              "note-02.md",
+              "note-05.md",
+              "note-04.md",
+              "note-03.md",
+              "note-01.md",
+              "note-01.md",
+              "note-01.md",
+              "scratch-note.md",
+              "note-03.md",
+              "note-04.md"
+            ],
+            "distinct_documents_retrieved": 6,
+            "recall": {
+              "recall@1": 0.0,
+              "recall@3": 0.5,
+              "recall@5": 1.0,
+              "recall@10": 1.0
+            },
+            "first_relevant_rank": 3,
+            "rr": 0.333333,
+            "ndcg@10": 0.543771,
+            "id": "ganthorpe-wickstay",
+            "query": "how is the ganthorpe wickstay tensioned",
+            "labelled_as": "ganthorpe-diaphragm"
+          }
+        ],
+        "dropped": true
+      }
+    },
+    "problems": []
+  },
+  "state_guard": {
+    "checked": [
+      "KB tree",
+      "manifest.json bytes",
+      "manifest root"
+    ],
+    "kb_present": true,
+    "kb_unchanged": true,
+    "manifest_unchanged": true,
+    "manifest_root": "8592458eaf272ed7",
+    "digests_withheld": "the tree fingerprints are compared in-process and printed to stdout; they are unsalted hashes of a private directory and are not written to a published report",
+    "problems": []
+  },
+  "table": "==============================================================================\nCRUD bench  baseline  (2026-07-20)\n==============================================================================\nkind        local        embedder chroma-onnx / all-MiniLM-L6-v2\nchunking    max=1200 overlap=150 min=60 (heading-aware)\ncollection  bench__baseline\ncorpus      7 files / 66 chunks / 54369 chars, mean chunk 823.8\nharness     runs=10  queries=5  k=5  network=blocked\n\nop        unit                                                cold       P50       P95       P99\n------------------------------------------------------------------------------------------------\ncreate    ms per full index build                          1093.14   1083.94   1092.39   1092.99\nread      ms per pass over 5 fixed queries, k=5             147.78     79.14    117.29    141.68\nupdate    ms per re-index of one changed note               166.63    112.13    146.40    162.59\ndelete    ms per removal of one note                          6.30      7.13      8.14      8.33\n  +lag    ms until the note stops appearing in results       16.01     16.25     17.00     17.31\n\nread, per query (P50 / P95 ms):\n  how does the harvester schedule its lattice passes      15.61    53.10\n  quorum drift between the outer and inner relay          15.95    16.30\n  what does the ledger say about pumice throughput        15.68    16.04\n  cost of a cold restart for the ferrite pipeline         15.89    16.42\n  marker phrase zorbium quintal beacon                    15.90    16.34\n\ndelete verified: 10/10 runs left 0 chunks and 0 probe hits from the deleted note\nstate guard: KB unchanged, manifest.json unchanged, manifest root 8592458eaf272ed7\n\nquality: document-level recall@k over 8 labelled queries, 7 documents\n  ground truth planted at generation (seed 20260720), 2.25 relevant docs/query, facts intact in index 18/18\n  k counts retrieved chunks; scored untimed, after the timed ops\n\n                                      recall@1  recall@3  recall@5 recall@10       mrr   ndcg@10\n  ----------------------------------------------------------------------------------------------\n  AGGREGATE (true labels)                0.458     1.000     1.000     1.000     1.000     1.000\n  CONTROL shuffled ground truth          0.000     0.250     0.646     0.958     0.266     0.507\n  CONTROL unanswerable query             0.000     0.000     0.000     0.000     0.000     0.000\n\n  thernwick-governor |R|=2 rank1=1       0.500     1.000     1.000     1.000     1.000     1.000\n  thernwick-rail |R|=2 rank1=1           0.500     1.000     1.000     1.000     1.000     1.000\n  vashtrin-buffer |R|=2 rank1=1          0.500     1.000     1.000     1.000     1.000     1.000\n  pellagrove-damper |R|=3 rank1=1        0.333     1.000     1.000     1.000     1.000     1.000\n  pellagrove-manifold |R|=3 rank1=1      0.333     1.000     1.000     1.000     1.000     1.000\n  vashtrin-escapement |R|=2 rank1=1      0.500     1.000     1.000     1.000     1.000     1.000\n  ganthorpe-diaphragm |R|=2 rank1=1      0.500     1.000     1.000     1.000     1.000     1.000\n  ganthorpe-wickstay |R|=2 rank1=1       0.500     1.000     1.000     1.000     1.000     1.000\n\n  control (a) unanswerable 'what clearance does the thernwick escutcheon' -> recall 0 at every k; it retrieved ['note-00.md', 'note-05.md', 'note-02.md']\n  control (b) labels deranged onto disjoint document sets (overlap 0) -> aggregate dropped: True\n=============================================================================="
+}

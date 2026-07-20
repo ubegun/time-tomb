@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "name": "chunk-large",
+  "kind": "local",
+  "title": "Local Chroma + ONNX MiniLM, ~2000-character chunks",
+  "description": "Same embedder as baseline, coarse sections. At 2000 characters this is genuinely the largest of the three, so the trio now brackets the shipped default from both sides: 300 / 1200 / 2000. Note that on a body whose longest section is under 1200 characters this profile is indistinguishable from baseline — a budget only bites when a section exceeds it.",
+  "collection": "toolbox__chunk_large",
+  "endpoint": null,
+  "embedder": {
+    "provider": "chroma-onnx",
+    "model": "all-MiniLM-L6-v2",
+    "dimensions": 384,
+    "space": "cosine",
+    "normalize": true
+  },
+  "chunking": {
+    "strategy": "heading-aware",
+    "max_chars": 2000,
+    "overlap_chars": 250,
+    "min_chars": 60
+  },
+  "retrieval": {
+    "k": 5
+  }
+}

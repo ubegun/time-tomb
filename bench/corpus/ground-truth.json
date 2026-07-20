@@ -1,0 +1,317 @@
+{
+  "schema_version": 1,
+  "generator": "bench.py:build_corpus",
+  "seed": 20260720,
+  "documents": [
+    "note-00.md",
+    "note-01.md",
+    "note-02.md",
+    "note-03.md",
+    "note-04.md",
+    "note-05.md",
+    "scratch-note.md"
+  ],
+  "mutable_document": "scratch-note.md",
+  "labels_origin": "planted at corpus generation; never derived from retriever output",
+  "relevance": "a retrieved chunk is a hit when its source file is in the query's relevant set; labels are never keyed to chunk ids",
+  "k_ladder": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "retrieval_depth": 10,
+  "queries": [
+    {
+      "id": "thernwick-governor",
+      "query": "what pressure does the thernwick governor hold at cold start",
+      "relevant": [
+        "note-00.md",
+        "note-01.md"
+      ]
+    },
+    {
+      "id": "thernwick-rail",
+      "query": "how often is the thernwick rail re-shimmed",
+      "relevant": [
+        "note-02.md",
+        "note-03.md"
+      ]
+    },
+    {
+      "id": "vashtrin-buffer",
+      "query": "what temperature limit applies to the vashtrin buffer",
+      "relevant": [
+        "note-04.md",
+        "note-05.md"
+      ]
+    },
+    {
+      "id": "pellagrove-damper",
+      "query": "why does the pellagrove damper need a second anchor",
+      "relevant": [
+        "note-00.md",
+        "note-02.md",
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "pellagrove-manifold",
+      "query": "what is the bleed order for the pellagrove manifold",
+      "relevant": [
+        "note-01.md",
+        "note-03.md",
+        "note-05.md"
+      ]
+    },
+    {
+      "id": "vashtrin-escapement",
+      "query": "what tool releases the vashtrin escapement",
+      "relevant": [
+        "note-00.md",
+        "note-03.md"
+      ]
+    },
+    {
+      "id": "ganthorpe-diaphragm",
+      "query": "what causes the ganthorpe diaphragm to blister",
+      "relevant": [
+        "note-01.md",
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "ganthorpe-wickstay",
+      "query": "how is the ganthorpe wickstay tensioned",
+      "relevant": [
+        "note-02.md",
+        "note-05.md"
+      ]
+    }
+  ],
+  "topics": [
+    {
+      "id": "thernwick-governor",
+      "query": "what pressure does the thernwick governor hold at cold start",
+      "fact": "The thernwick governor holds a cold-start pressure of 47 kilopascal. Crews read the thernwick governor before the first pass of a shift, because a governor that has drifted below 40 kilopascal will not seat.",
+      "notes": [
+        "note-00.md",
+        "note-01.md"
+      ]
+    },
+    {
+      "id": "thernwick-rail",
+      "query": "how often is the thernwick rail re-shimmed",
+      "fact": "The thernwick rail is re-shimmed every nine hundred cycles. Shimming the thernwick rail early wastes a wear allowance that is measured over the whole service interval, not over a single week.",
+      "notes": [
+        "note-02.md",
+        "note-03.md"
+      ]
+    },
+    {
+      "id": "vashtrin-buffer",
+      "query": "what temperature limit applies to the vashtrin buffer",
+      "fact": "The vashtrin buffer must stay under sixty-two degrees at the outlet. Above that the vashtrin buffer starts to shed its facing, and the loss is not recoverable by cooling it back down afterwards.",
+      "notes": [
+        "note-04.md",
+        "note-05.md"
+      ]
+    },
+    {
+      "id": "pellagrove-damper",
+      "query": "why does the pellagrove damper need a second anchor",
+      "fact": "The pellagrove damper needs a second anchor because its first anchor carries only vertical load. Without the second anchor a pellagrove damper walks sideways under reversing load and eventually fouls.",
+      "notes": [
+        "note-00.md",
+        "note-02.md",
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "pellagrove-manifold",
+      "query": "what is the bleed order for the pellagrove manifold",
+      "fact": "The pellagrove manifold is bled outboard first, then centre, then inboard. Bleeding a pellagrove manifold in the reverse order traps a pocket at the centre port that no amount of further bleeding clears.",
+      "notes": [
+        "note-01.md",
+        "note-03.md",
+        "note-05.md"
+      ]
+    },
+    {
+      "id": "vashtrin-escapement",
+      "query": "what tool releases the vashtrin escapement",
+      "fact": "The vashtrin escapement is released with a quarter-inch offset key. Prying a vashtrin escapement with a screwdriver deforms the pawl seat, which is the one part of the assembly with no spare.",
+      "notes": [
+        "note-00.md",
+        "note-03.md"
+      ]
+    },
+    {
+      "id": "ganthorpe-diaphragm",
+      "query": "what causes the ganthorpe diaphragm to blister",
+      "fact": "The ganthorpe diaphragm blisters when it is seated dry. A ganthorpe diaphragm wetted with the specified film will not blister even after several hundred reversals at full stroke.",
+      "notes": [
+        "note-01.md",
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "ganthorpe-wickstay",
+      "query": "how is the ganthorpe wickstay tensioned",
+      "fact": "The ganthorpe wickstay is tensioned to eleven newton metres, in two passes. A ganthorpe wickstay taken to full torque in one pass reads correct on the wrench and is still slack across the far side.",
+      "notes": [
+        "note-02.md",
+        "note-05.md"
+      ]
+    }
+  ],
+  "no_answer_query": "what clearance does the thernwick escutcheon take when it is refaced",
+  "timed_queries": [
+    "how does the harvester schedule its lattice passes",
+    "quorum drift between the outer and inner relay",
+    "what does the ledger say about pumice throughput",
+    "cost of a cold restart for the ferrite pipeline",
+    "marker phrase zorbium quintal beacon"
+  ],
+  "delete_marker": "zorbium quintal beacon",
+  "planting": [
+    {
+      "topic": "thernwick-governor",
+      "source": "note-00.md",
+      "section": "ferrite 1",
+      "section_chars_before": 2627,
+      "section_chars_after": 2836
+    },
+    {
+      "topic": "pellagrove-damper",
+      "source": "note-00.md",
+      "section": "quorum 5",
+      "section_chars_before": 2627,
+      "section_chars_after": 2829
+    },
+    {
+      "topic": "vashtrin-escapement",
+      "source": "note-00.md",
+      "section": "ferrite 0",
+      "section_chars_before": 429,
+      "section_chars_after": 622
+    },
+    {
+      "topic": "thernwick-governor",
+      "source": "note-01.md",
+      "section": "solstice 5",
+      "section_chars_before": 1768,
+      "section_chars_after": 1977
+    },
+    {
+      "topic": "pellagrove-manifold",
+      "source": "note-01.md",
+      "section": "ferrite 1",
+      "section_chars_before": 1164,
+      "section_chars_after": 1369
+    },
+    {
+      "topic": "ganthorpe-diaphragm",
+      "source": "note-01.md",
+      "section": "ferrite 4",
+      "section_chars_before": 1164,
+      "section_chars_after": 1344
+    },
+    {
+      "topic": "thernwick-rail",
+      "source": "note-02.md",
+      "section": "thicket 2",
+      "section_chars_before": 2631,
+      "section_chars_after": 2824
+    },
+    {
+      "topic": "pellagrove-damper",
+      "source": "note-02.md",
+      "section": "vellum 0",
+      "section_chars_before": 1772,
+      "section_chars_after": 1974
+    },
+    {
+      "topic": "ganthorpe-wickstay",
+      "source": "note-02.md",
+      "section": "vellum 4",
+      "section_chars_before": 1772,
+      "section_chars_after": 1971
+    },
+    {
+      "topic": "thernwick-rail",
+      "source": "note-03.md",
+      "section": "ripple 0",
+      "section_chars_before": 1772,
+      "section_chars_after": 1965
+    },
+    {
+      "topic": "pellagrove-manifold",
+      "source": "note-03.md",
+      "section": "cistern 5",
+      "section_chars_before": 1166,
+      "section_chars_after": 1371
+    },
+    {
+      "topic": "vashtrin-escapement",
+      "source": "note-03.md",
+      "section": "bellows 3",
+      "section_chars_before": 788,
+      "section_chars_after": 981
+    },
+    {
+      "topic": "vashtrin-buffer",
+      "source": "note-04.md",
+      "section": "thicket 4",
+      "section_chars_before": 2625,
+      "section_chars_after": 2821
+    },
+    {
+      "topic": "pellagrove-damper",
+      "source": "note-04.md",
+      "section": "harvester 0",
+      "section_chars_before": 1164,
+      "section_chars_after": 1366
+    },
+    {
+      "topic": "ganthorpe-diaphragm",
+      "source": "note-04.md",
+      "section": "relay 3",
+      "section_chars_before": 792,
+      "section_chars_after": 972
+    },
+    {
+      "topic": "vashtrin-buffer",
+      "source": "note-05.md",
+      "section": "pillar 0",
+      "section_chars_before": 2627,
+      "section_chars_after": 2823
+    },
+    {
+      "topic": "pellagrove-manifold",
+      "source": "note-05.md",
+      "section": "vellum 1",
+      "section_chars_before": 1768,
+      "section_chars_after": 1973
+    },
+    {
+      "topic": "ganthorpe-wickstay",
+      "source": "note-05.md",
+      "section": "cadmium 4",
+      "section_chars_before": 1163,
+      "section_chars_after": 1362
+    }
+  ],
+  "digest": {
+    "algorithm": "sha256, hex, truncated to 16 characters",
+    "files": {
+      "note-00.md": "9e8af7f65ddea6a7",
+      "note-01.md": "1c48905a6adb449f",
+      "note-02.md": "d24ebc097656d595",
+      "note-03.md": "f6f9ab52b8555ab4",
+      "note-04.md": "a4f7d968d2856a10",
+      "note-05.md": "85c2393e2fa1f8b9",
+      "scratch-note.md": "342fd34a21e75acd"
+    }
+  }
+}

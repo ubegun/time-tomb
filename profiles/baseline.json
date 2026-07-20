@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "name": "baseline",
+  "kind": "local",
+  "title": "Local Chroma + ONNX MiniLM, current production chunking",
+  "description": "Reproduces the toolkit's shipped behaviour exactly. Its chunking block repeats the module defaults of index_toolbox.py, so selecting this profile is a no-op with respect to the manifest.",
+  "collection": "toolbox",
+  "endpoint": null,
+  "embedder": {
+    "provider": "chroma-onnx",
+    "model": "all-MiniLM-L6-v2",
+    "dimensions": 384,
+    "space": "cosine",
+    "normalize": true
+  },
+  "chunking": {
+    "strategy": "heading-aware",
+    "max_chars": 1200,
+    "overlap_chars": 150,
+    "min_chars": 60
+  },
+  "retrieval": {
+    "k": 5
+  }
+}

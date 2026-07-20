@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "name": "chunk-small",
+  "kind": "local",
+  "title": "Local Chroma + ONNX MiniLM, ~300-character chunks",
+  "description": "Same embedder as baseline, smaller sections. More, tighter chunks: cheaper to read into a prompt, but a single chunk carries less surrounding context. Overlap is scaled down with the budget so the overlap-to-chunk ratio stays comparable to baseline.",
+  "collection": "toolbox__chunk_small",
+  "endpoint": null,
+  "embedder": {
+    "provider": "chroma-onnx",
+    "model": "all-MiniLM-L6-v2",
+    "dimensions": 384,
+    "space": "cosine",
+    "normalize": true
+  },
+  "chunking": {
+    "strategy": "heading-aware",
+    "max_chars": 300,
+    "overlap_chars": 40,
+    "min_chars": 60
+  },
+  "retrieval": {
+    "k": 5
+  }
+}
