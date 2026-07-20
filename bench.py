@@ -1,13 +1,28 @@
 #!/usr/bin/env python
 """CRUD timing harness for the local retrieval toolkit, one run per profile.
 
-Four operations are timed, N runs each, reported as P50/P95/P99 rather than
-averages:
+Four operations are timed, each with its own sample count, and the statistics
+reported are gated on that count:
 
-    Create  a full index build of the whole corpus
-    Read    one pass over a fixed query set at fixed k, fixed order
-    Update  re-index of a single changed note
+    Create  a full index build of the whole corpus            (N=20)
+    Read    one pass over a fixed query set at fixed k        (N=100)
+    Update  re-index of a single changed note                 (N=50)
     Delete  removal of one note, plus the lag until it stops being returned
+                                                              (N=100)
+
+Median, min, max and median absolute deviation are always reported. P50 and P95
+are reported only where N >= 100. **There is no P99 anywhere in this file.** At
+these sample sizes a P99 is an interpolation between the two largest samples
+dressed up as a tail statistic, and reporting it would be a claim the samples
+cannot carry.
+
+Two *modes* are named and never mixed:
+
+    warm        many operations in one process: model loaded, OS cache hot.
+                Every one of the four operations above is warm.
+    cold-start  a fresh subprocess per sample, paying interpreter startup,
+                module import, Chroma client construction and ONNX model load
+                before it does anything. Reported in its own section.
 
 Two safety properties are structural, not conventions:
 
@@ -49,6 +64,18 @@ Four properties make that number mean something:
   corpus answers it) and a deranged label assignment that maps every query
   onto a document set disjoint from its true one.
 
+Read latency is additionally **decomposed**: query embedding, vector search and
+result materialization are timed separately against the same collection, and
+their sum is required to close to within 10% of the full in-process read. A
+decomposition that does not close is not published. The full MCP round-trip is
+measured alongside them as an outer envelope — process hop, JSON-RPC framing
+and the server's own work — and is explicitly not one of the summands.
+
+Retrieval is scored twice. ``op_quality`` scores it at equal k, which is not a
+fair comparison across chunk sizes: five chunks of 240 characters and five of
+1087 are not the same context. ``op_token_budget`` scores it again under a fixed
+token budget, which is the constraint a caller actually has.
+
 The corpus is also a *shippable artefact*. ``--emit-corpus`` writes it, with its
 labelled query set, as files; ``--corpus`` runs against those files instead of
 generating a throwaway copy. The on-disk corpus is verified byte-for-byte
@@ -58,9 +85,9 @@ shipped bytes are re-checked on the way out. A corpus a stranger can silently
 edit is a corpus whose numbers mean nothing.
 
 Usage:
-    python bench.py                                   # baseline, N=10
+    python bench.py                                   # baseline, at the defaults
     python bench.py --profile baseline --profile chunk-small
-    python bench.py --profile chunk-large -n 5
+    python bench.py --profile chunk-large -n 5        # smoke test, not publishable
     python bench.py --emit-corpus bench/corpus        # write the shipped corpus
     python bench.py --all --corpus bench/corpus       # the published run
     python bench.py --render-benchmarks               # BENCHMARKS.md from JSONs
@@ -83,6 +110,12 @@ import sys
 import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
+
+# The earliest clock this module can read. The cold-start child measures its own
+# initialisation from here, so the only thing before it is interpreter startup
+# and the stdlib imports above — which is precisely what ``overhead_ms``
+# accounts for, computed by the parent from the process wall time.
+_PROCESS_START = time.perf_counter()
 
 # --- interpreter bootstrap --------------------------------------------------
 # The published reproduce line is ``./install.sh && python bench.py ...``, and
@@ -163,6 +196,7 @@ os.environ.pop("RAG_PROFILE", None)
 from raglog import COLLECTION_NAME, KB_ROOT, MANIFEST_FILE, RAG_ROOT, get_logger  # noqa: E402
 from index_toolbox import (  # noqa: E402
     ChunkConfig,
+    _embedding_function,
     config_from_profile,
     chunk_markdown,
     get_client,
@@ -173,8 +207,52 @@ from index_toolbox import (  # noqa: E402
 
 log = get_logger("bench")
 
-SCHEMA_VERSION = 2
-DEFAULT_RUNS = 10
+SCHEMA_VERSION = 3
+
+# --- sample sizes ----------------------------------------------------------
+# One N per operation, not one N for the harness. The four operations differ by
+# two orders of magnitude in cost, so a single N either starves the cheap ones
+# of samples or makes the expensive ones unrunnable. These are the counts the
+# published run uses; the caps exist so that a typo cannot turn a smoke test
+# into an afternoon.
+#
+# The gate below is the reason the counts are what they are: a percentile is
+# rendered only at N >= 100, so read and delete are sampled to 100 and create
+# and update are honest about reporting a median and a spread instead.
+DEFAULT_RUNS: Dict[str, int] = {
+    "read": 100,
+    "delete": 100,
+    "update": 50,
+    "create": 20,
+    "cold_start": 5,
+}
+RUNS_CAP: Dict[str, int] = {
+    "read": 500,
+    "delete": 500,
+    "update": 500,
+    "create": 500,
+    "cold_start": 50,
+}
+# The operations ``-n/--runs`` sets. Cold start is not one of them: it is a
+# subprocess per sample and a smoke-test N of 5 there is already the default.
+TIMED_OPS: Tuple[str, ...] = ("create", "read", "update", "delete")
+
+# A percentile needs enough samples that it is not simply naming one of them.
+PERCENTILE_MIN_N = 100
+
+MODE_WARM = "warm"
+MODE_COLD_START = "cold-start"
+
+# Cold start and the stage split both need their own sample counts stated
+# wherever they are rendered; these are the defaults for the two measurements
+# that are not one of the four operations.
+MCP_ROUNDTRIP_RUNS = 20
+STAGE_RESIDUAL_LIMIT_PCT = 10.0
+TOKEN_BUDGETS: Tuple[int, ...] = (2000, 4000)
+HEADLINE_BUDGET = 2000
+BUDGET_RETRIEVAL_CAP = 128
+COLD_START_SENTINEL = "COLD-START-PROBE "
+
 BENCH_DIR = RAG_ROOT / "bench"
 RESULTS_DIR = BENCH_DIR / "results"
 SHIPPED_CORPUS = BENCH_DIR / "corpus"
@@ -823,21 +901,56 @@ def percentile(values: List[float], quantile: float) -> Optional[float]:
     return ordered[low] + (ordered[high] - ordered[low]) * (position - low)
 
 
-def summarise(samples: List[float], unit: str) -> Dict[str, object]:
-    return {
+def median_absolute_deviation(values: List[float]) -> Optional[float]:
+    """``median(|x - median(x)|)``.
+
+    The right spread statistic at small N. A standard deviation assumes the tail
+    was sampled and is dragged around by the one slow run every process has;
+    MAD asks how far a typical sample sits from a typical sample, which is a
+    question twenty samples can answer.
+    """
+    if not values:
+        return None
+    centre = statistics.median(values)
+    return statistics.median([abs(value - centre) for value in values])
+
+
+def summarise(samples: List[float], unit: str, mode: str = MODE_WARM) -> Dict[str, object]:
+    """Statistics for one operation, gated on how many samples there are.
+
+    ``median``/``min``/``max``/``mad`` are always reported: they are statements
+    about the samples in hand. ``p50``/``p95`` appear only at N >= 100, because
+    below that a percentile is an interpolation between two neighbouring samples
+    presented as a property of a distribution.
+
+    There is no ``p99``. Not gated — absent. At N=100 the 99th percentile is an
+    interpolation between the two largest samples, and no N used anywhere in
+    this harness earns it. A key that is missing cannot be read by accident; a
+    key that is present and null invites one.
+
+    ``mode`` is carried through into the report so that no table can be rendered
+    without saying which of the two measurement modes produced it.
+    """
+    ordered = sorted(samples)
+    earned = len(samples) >= PERCENTILE_MIN_N
+    stats: Dict[str, object] = {
         "unit": unit,
+        "mode": mode,
         "n": len(samples),
-        "cold_ms": round(samples[0], 3) if samples else None,
-        "warm_p50_ms": round(percentile(samples[1:], 0.50), 3) if len(samples) > 1 else None,
-        "p50_ms": round(percentile(samples, 0.50), 3) if samples else None,
-        "p95_ms": round(percentile(samples, 0.95), 3) if samples else None,
-        "p99_ms": round(percentile(samples, 0.99), 3) if samples else None,
-        "min_ms": round(min(samples), 3) if samples else None,
-        "max_ms": round(max(samples), 3) if samples else None,
+        "median_ms": round(statistics.median(ordered), 3) if samples else None,
+        "min_ms": round(ordered[0], 3) if samples else None,
+        "max_ms": round(ordered[-1], 3) if samples else None,
+        "mad_ms": round(median_absolute_deviation(ordered), 3) if samples else None,
         "mean_ms": round(statistics.fmean(samples), 3) if samples else None,
         "stdev_ms": round(statistics.pstdev(samples), 3) if len(samples) > 1 else None,
+        "percentiles_earned": earned,
+        "percentile_min_n": PERCENTILE_MIN_N,
         "samples_ms": [round(value, 3) for value in samples],
     }
+    if earned:
+        stats["p50_ms"] = round(percentile(ordered, 0.50), 3)
+        stats["p95_ms"] = round(percentile(ordered, 0.95), 3)
+    return stats
 
 
 # --- retrieval quality ------------------------------------------------------
@@ -963,6 +1076,125 @@ def derange_labels(relevant_sets: List[List[str]]) -> Optional[List[int]]:
     return list(assignment) if search(0) else None
 
 
+# --- token-budget retrieval -------------------------------------------------
+# Equal k is not a fair comparison across chunk geometries. Five chunks of 240
+# characters and five of 1087 are not the same context, so a ladder that holds k
+# fixed is measuring "how much text did you hand me" as much as "was it the
+# right text". A caller does not have a k budget, it has a context budget.
+#
+# Everything below is a pure function of (ranked chunks, budget, relevant set):
+# no collection, no client, no clock. That is what lets the tests exercise the
+# admission rule on hand-built inputs.
+
+
+def approx_tokens(text: str) -> int:
+    """``ceil(len(text) / 4)`` — a character heuristic, not a tokenizer.
+
+    Named ``approx`` everywhere it surfaces, and documented as an approximation
+    in the generated report, because it is one: real BPE token counts move with
+    vocabulary and whitespace, and a reader has to be able to discount this. It
+    is used identically for every profile, so it cannot favour one of them; what
+    it cannot support is an absolute claim about a real model's context window.
+    """
+    return math.ceil(len(text) / 4)
+
+
+def admit_within_budget(
+    ranked: List[Tuple[str, str]], budget: int
+) -> List[Tuple[str, str, int]]:
+    """Greedy **prefix**: admit ranked chunks in order until one does not fit.
+
+    Stop at the first chunk that would exceed the budget — do not skip it and
+    carry on down the ranking. Skip-and-continue is a different retriever, and a
+    flattering one: it would let a profile with many small chunks backfill the
+    remaining budget with lower-ranked text while a profile with large chunks
+    got truncated, and the comparison would then be measuring the packer rather
+    than the chunking.
+
+    Returns ``(source, text, tokens)`` for each admitted chunk, in rank order.
+    """
+    admitted: List[Tuple[str, str, int]] = []
+    used = 0
+    for source, text in ranked:
+        cost = approx_tokens(text)
+        if used + cost > budget:
+            break
+        admitted.append((source, text, cost))
+        used += cost
+    return admitted
+
+
+def score_budget(
+    ranked: List[Tuple[str, str]], relevant: Iterable[str], budget: int
+) -> Dict[str, object]:
+    """Score one query's retrieval under a fixed token budget.
+
+    * ``recall@budget`` — relevant documents represented among the admitted
+      chunks, over ``|relevant|`` (floored at 1, so the unanswerable control can
+      still represent a non-zero score and be seen to score zero).
+    * ``unique_docs`` — distinct sources admitted: how many documents actually
+      made it into the context, which is the number a reader of the answer sees.
+    * ``duplicate_source_rate`` — the share of the admitted chunks that came
+      from a document already represented. Budget spent re-reading one note.
+    * ``relevant_token_fraction`` — of the budget actually used, how much of it
+      was text from a relevant document. This is the metric equal-k cannot
+      express at all.
+    """
+    rel = set(relevant)
+    denominator = max(1, len(rel))
+    admitted = admit_within_budget(ranked, budget)
+
+    sources = [source for source, _text, _cost in admitted]
+    tokens_used = sum(cost for _source, _text, cost in admitted)
+    unique: List[str] = []
+    for source in sources:
+        if source not in unique:
+            unique.append(source)
+    relevant_tokens = sum(
+        cost for source, _text, cost in admitted if source in rel
+    )
+    hit = {source for source in sources if source in rel}
+
+    return {
+        "budget_tokens": budget,
+        "chunks_admitted": len(admitted),
+        "tokens_used": tokens_used,
+        "unique_docs": len(unique),
+        "sources": sources,
+        "duplicate_source_rate": (
+            round((len(admitted) - len(unique)) / len(admitted), 6) if admitted else 0.0
+        ),
+        "recall@budget": round(len(hit) / denominator, 6),
+        "relevant_tokens": relevant_tokens,
+        "relevant_token_fraction": (
+            round(relevant_tokens / tokens_used, 6) if tokens_used else 0.0
+        ),
+    }
+
+
+BUDGET_METRICS: Tuple[str, ...] = (
+    "recall@budget",
+    "unique_docs",
+    "chunks_admitted",
+    "tokens_used",
+    "duplicate_source_rate",
+    "relevant_tokens",
+    "relevant_token_fraction",
+)
+
+
+def aggregate_budget(scored: List[Dict[str, object]]) -> Dict[str, object]:
+    """Means over the labelled queries. Nothing here is a timing."""
+    if not scored:
+        return {}
+    out: Dict[str, object] = {"queries": len(scored)}
+    for metric in BUDGET_METRICS:
+        out[metric] = round(
+            statistics.fmean([float(entry[metric]) for entry in scored]), 6
+        )
+    return out
+
+
 # --- the harness ------------------------------------------------------------
 
 
@@ -971,32 +1203,42 @@ class ProfileBench:
         self,
         profile: dict,
         corpus: Path,
-        runs: int,
+        runs_per_op: Dict[str, int],
         k: int,
         truth: Dict[str, object],
+        budgets: Tuple[int, ...] = TOKEN_BUDGETS,
     ) -> None:
         self.profile = profile
         self.name = profile["name"]
         self.config: ChunkConfig = config_from_profile(profile)
         self.corpus = corpus
-        self.runs = runs
+        self.runs_per_op = dict(runs_per_op)
         self.k = k
+        self.budgets = tuple(budgets)
         # The labelled set as it was loaded — from the shipped file when one is
         # in use. Nothing below re-derives a label from QUALITY_TOPICS.
         self.truth = truth
         self._planting = list(truth.get("planting") or [])  # type: ignore
         self.collection_name = COLLECTION_PREFIX + self.name.replace("-", "_")
+        # The cold-start Create probe builds a fresh index in a fresh process.
+        # It gets its own collection so that a subprocess cannot disturb the one
+        # the warm measurements above it were taken against.
+        self.cold_collection_name = self.collection_name + "_cold"
         self._assert_target_safe()
         self.scratch_path = corpus / SCRATCH_NOTE
         self.notes: Dict[str, object] = {}
 
+    def runs(self, op: str) -> int:
+        return int(self.runs_per_op[op])
+
     def _assert_target_safe(self) -> None:
-        if not self.collection_name.startswith(COLLECTION_PREFIX):
-            raise RuntimeError("refusing a collection outside the bench namespace")
-        if self.collection_name == COLLECTION_NAME:
-            raise RuntimeError(
-                "refusing to bench against the working collection %r" % COLLECTION_NAME
-            )
+        for name in (self.collection_name, self.cold_collection_name):
+            if not name.startswith(COLLECTION_PREFIX):
+                raise RuntimeError("refusing a collection outside the bench namespace")
+            if name == COLLECTION_NAME:
+                raise RuntimeError(
+                    "refusing to bench against the working collection %r" % COLLECTION_NAME
+                )
 
     # -- helpers ------------------------------------------------------------
 
@@ -1053,7 +1295,7 @@ class ProfileBench:
     def op_create(self) -> Tuple[List[float], dict]:
         samples: List[float] = []
         summary: dict = {}
-        for _ in range(self.runs):
+        for _ in range(self.runs("create")):
             started = time.perf_counter()
             summary = self._index_all(reset=True)
             samples.append((time.perf_counter() - started) * 1000.0)
@@ -1063,7 +1305,7 @@ class ProfileBench:
         collection = self._collection()
         samples: List[float] = []
         per_query: Dict[str, List[float]] = {query: [] for query in QUERIES}
-        for _ in range(self.runs):
+        for _ in range(self.runs("read")):
             pass_started = time.perf_counter()
             for query in QUERIES:
                 query_started = time.perf_counter()
@@ -1080,7 +1322,7 @@ class ProfileBench:
         collection = self._collection()
         samples: List[float] = []
         chunk_counts: List[int] = []
-        for run in range(self.runs):
+        for run in range(self.runs("update")):
             variant = (run % 2) + 1  # alternate, so every run is a real change
             self.scratch_path.write_text(scratch_note_text(variant), encoding="utf-8")
             started = time.perf_counter()
@@ -1098,7 +1340,7 @@ class ProfileBench:
         consistency_samples: List[float] = []
         verifications: List[dict] = []
 
-        for _ in range(self.runs):
+        for _ in range(self.runs("delete")):
             # restore first, untimed: every run must delete something real
             present = self._upsert_note(collection, self.scratch_path)
             if present == 0:
@@ -1152,6 +1394,389 @@ class ProfileBench:
         # restore for a coherent end state
         self._upsert_note(collection, self.scratch_path)
         return delete_samples, consistency_samples, {"per_run": verifications}
+
+    # -- read latency, decomposed -------------------------------------------
+
+    def op_stages(self) -> dict:
+        """Split the read into its stages, and refuse a split that does not close.
+
+        The v1 headline was "on a small index, search is nearly free relative to
+        MiniLM inference". v1 never measured that — it inferred it from the fact
+        that read latency barely moved when the index size did. This measures it.
+
+        Four timings per sample, on the same query in the same iteration so that
+        they can be subtracted from one another:
+
+        * **query embedding** — ``ef([query])``, the ONNX forward pass alone.
+        * **vector search** — ``collection.query(query_embeddings=..., include=[])``,
+          the ANN lookup with nothing materialized.
+        * **result materialization** — the same query asking for documents,
+          metadatas and distances, *minus* the search-only time. A difference of
+          two measurements, so on an individual sample it can come out negative.
+          It is floored at zero and the floored samples are **counted**: a
+          silently clamped negative is a fabricated number.
+        * **full in-process read** — ``collection.query(query_texts=[query])``,
+          which is the sum the first three have to reconstruct.
+
+        The embedding function instance is the one the collection itself uses.
+        Each ONNX instance caches its own session, so two instances would load
+        the model twice and the stage timings would not be comparable with the
+        full read they are meant to decompose.
+        """
+        ef = _embedding_function()
+        # Untimed: the ONNX session is built on first use, and that cost belongs
+        # to cold start (below), not to a warm read.
+        ef(["warm the onnx session before anything here is timed"])
+        collection = get_collection(
+            name=self.collection_name, embedding_function=ef
+        )
+        runs = self.runs("read")
+
+        embed: List[float] = []
+        search: List[float] = []
+        material: List[float] = []
+        full: List[float] = []
+        residual: List[float] = []
+        floored = 0
+
+        for _ in range(runs):
+            for query in QUERIES:
+                started = time.perf_counter()
+                vector = ef([query])
+                embed_ms = (time.perf_counter() - started) * 1000.0
+
+                started = time.perf_counter()
+                collection.query(
+                    query_embeddings=vector, n_results=self.k, include=[]
+                )
+                search_ms = (time.perf_counter() - started) * 1000.0
+
+                started = time.perf_counter()
+                collection.query(
+                    query_embeddings=vector,
+                    n_results=self.k,
+                    include=["documents", "metadatas", "distances"],
+                )
+                search_with_payload_ms = (time.perf_counter() - started) * 1000.0
+
+                started = time.perf_counter()
+                collection.query(query_texts=[query], n_results=self.k)
+                full_ms = (time.perf_counter() - started) * 1000.0
+
+                material_ms = search_with_payload_ms - search_ms
+                if material_ms < 0.0:
+                    material_ms = 0.0
+                    floored += 1
+
+                embed.append(embed_ms)
+                search.append(search_ms)
+                material.append(material_ms)
+                full.append(full_ms)
+                residual.append(full_ms - (embed_ms + search_ms + material_ms))
+
+        samples = len(full)
+        stages = {
+            "query_embedding": summarise(embed, "ms per query, ONNX forward pass"),
+            "vector_search": summarise(search, "ms per query, ANN lookup, include=[]"),
+            "result_materialization": summarise(
+                material, "ms per query, documents+metadatas+distances, as a delta"
+            ),
+        }
+        total = summarise(full, "ms per query, full in-process read, k=%d" % self.k)
+
+        summed = sum(float(block["median_ms"]) for block in stages.values())
+        median_full = float(total["median_ms"])
+        residual_pct = (
+            round((median_full - summed) / median_full * 100.0, 3) if median_full else 0.0
+        )
+
+        if abs(residual_pct) > STAGE_RESIDUAL_LIMIT_PCT:
+            raise RuntimeError(
+                "stage split does not close on %s: stages sum to %.3f ms against a "
+                "full read of %.3f ms, residual %.2f%% (limit %.1f%%). A "
+                "decomposition that does not close must not be published."
+                % (
+                    self.name,
+                    summed,
+                    median_full,
+                    residual_pct,
+                    STAGE_RESIDUAL_LIMIT_PCT,
+                )
+            )
+
+        embedding_share_pct = (
+            round(float(stages["query_embedding"]["median_ms"]) / median_full * 100.0, 2)
+            if median_full
+            else None
+        )
+
+        return {
+            "mode": MODE_WARM,
+            "n": samples,
+            "n_note": "%d passes over %d fixed queries" % (runs, len(QUERIES)),
+            "k": self.k,
+            "stages": stages,
+            "full_in_process_read": total,
+            "stage_sum_median_ms": round(summed, 3),
+            "stage_residual_pct": residual_pct,
+            "stage_residual_limit_pct": STAGE_RESIDUAL_LIMIT_PCT,
+            "stage_residual_closes": abs(residual_pct) <= STAGE_RESIDUAL_LIMIT_PCT,
+            "materialization_floored_samples": floored,
+            "materialization_floored_note": (
+                "materialization is the difference of two measurements and can "
+                "come out negative on an individual sample; those samples are "
+                "floored at zero and counted here rather than silently clamped"
+            ),
+            "embedding_share_of_read_pct": embedding_share_pct,
+            "mcp_roundtrip": self.op_mcp_roundtrip(),
+        }
+
+    def op_mcp_roundtrip(self, runs: int = MCP_ROUNDTRIP_RUNS) -> dict:
+        """One ``tools/call search_toolbox`` per sample, over stdio.
+
+        The **outer envelope**, not a summand: it contains a process hop,
+        JSON-RPC framing on both sides and the server's own formatting work, on
+        top of everything the in-process stages measure. It is rendered in the
+        same table and marked as not part of the sum.
+
+        The server is launched with ``RAG_COLLECTION`` pointed at this profile's
+        bench collection. ``raglog.py`` reads that variable at import, and
+        ``mcp_server.py`` imports the name from there, so the redirection needs
+        no code change — and the check below proves it took effect rather than
+        assuming it: a response that does not name a corpus document means the
+        server read some other collection, and that is a failed run, not a slow
+        one.
+        """
+        env = dict(os.environ)
+        env["RAG_COLLECTION"] = self.collection_name
+        env["RAG_LOG_QUIET"] = "1"
+        env["ANONYMIZED_TELEMETRY"] = "False"
+        env["CHROMA_ANONYMIZED_TELEMETRY"] = "False"
+        env.pop("RAG_PROFILE", None)
+
+        corpus_names = set(corpus_documents())
+        samples: List[float] = []
+        server = subprocess.Popen(
+            [sys.executable, str(RAG_ROOT / "mcp_server.py")],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            env=env,
+            cwd=str(RAG_ROOT),
+        )
+
+        def call(message: dict) -> dict:
+            assert server.stdin is not None and server.stdout is not None
+            server.stdin.write(json.dumps(message) + "\n")
+            server.stdin.flush()
+            line = server.stdout.readline()
+            if not line:
+                raise RuntimeError("MCP server closed the stream before answering")
+            return json.loads(line)
+
+        try:
+            handshake = call(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 0,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": {},
+                        "clientInfo": {"name": "bench", "version": "2"},
+                    },
+                }
+            )
+            if "result" not in handshake:
+                raise RuntimeError("MCP initialize failed: %r" % handshake)
+            assert server.stdin is not None
+            server.stdin.write(
+                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+            )
+            server.stdin.flush()
+
+            # Untimed warm-up. The server imports chromadb and loads the ONNX
+            # model lazily, on its first tool call; this table is the warm
+            # envelope of a warm read, so that one-off cost is paid outside the
+            # samples and said so in the report. Cold start is measured, in its
+            # own mode, further down.
+            warm = call(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "search_toolbox",
+                        "arguments": {"query": QUERIES[0], "k": self.k},
+                    },
+                }
+            )
+            text = "".join(
+                block.get("text", "")
+                for block in ((warm.get("result") or {}).get("content") or [])
+            )
+            if not any(name in text for name in corpus_names):
+                raise RuntimeError(
+                    "the MCP server did not answer from the bench collection %r — "
+                    "no corpus document is named in its reply. Refusing to "
+                    "publish a round-trip measured against an unknown collection."
+                    % self.collection_name
+                )
+
+            for index in range(runs):
+                query = QUERIES[index % len(QUERIES)]
+                message = {
+                    "jsonrpc": "2.0",
+                    "id": 2 + index,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "search_toolbox",
+                        "arguments": {"query": query, "k": self.k},
+                    },
+                }
+                started = time.perf_counter()
+                response = call(message)
+                samples.append((time.perf_counter() - started) * 1000.0)
+                if "result" not in response:
+                    raise RuntimeError("MCP tools/call failed: %r" % response)
+        finally:
+            try:
+                if server.stdin is not None:
+                    server.stdin.close()
+                server.wait(timeout=15)
+            except Exception:  # pragma: no cover - defensive teardown
+                server.kill()
+
+        return dict(
+            summarise(samples, "ms per tools/call search_toolbox over stdio, k=%d" % self.k),
+            collection=self.collection_name,
+            envelope=True,
+            not_a_summand=(
+                "the round trip contains a process hop, JSON-RPC framing and the "
+                "server's own formatting on top of the in-process stages; it is "
+                "an envelope around them, not one of them"
+            ),
+            handshake_excluded=True,
+            warmup_call_excluded=True,
+        )
+
+    # -- cold start (a fresh process per sample) -----------------------------
+
+    def op_cold_start(self, kind: str) -> dict:
+        """``runs_per_op['cold_start']`` fresh subprocesses, one operation each.
+
+        This is what v1's "cold" column claimed to be and was not: v1's cold
+        figure was the first sample of a warm loop, taken in a process that had
+        already imported everything and loaded the model. Here each sample pays
+        interpreter startup, module import, Chroma client construction and the
+        ONNX model load before it does any work.
+
+        ``process_wall_ms`` is the headline: the whole subprocess, measured by
+        the parent. ``init_ms`` and ``op_ms`` are the child's own split of it,
+        and ``overhead_ms`` is what is left — interpreter startup and teardown,
+        reported rather than absorbed into either.
+        """
+        runs = self.runs("cold_start")
+        target = (
+            self.collection_name if kind == "read" else self.cold_collection_name
+        )
+        wall: List[float] = []
+        init: List[float] = []
+        operation: List[float] = []
+        overhead: List[float] = []
+        details: List[dict] = []
+
+        for _ in range(runs):
+            payload, wall_ms = self._cold_start_probe(kind, target)
+            init_ms = float(payload["init_ms"])
+            op_ms = float(payload["op_ms"])
+            wall.append(wall_ms)
+            init.append(init_ms)
+            operation.append(op_ms)
+            overhead.append(wall_ms - (init_ms + op_ms))
+            details.append(payload.get("detail") or {})
+
+        unit = (
+            "ms per fresh process, one pass over %d fixed queries" % len(QUERIES)
+            if kind == "read"
+            else "ms per fresh process, one full index build"
+        )
+        return {
+            "operation": kind,
+            "collection": target,
+            "process_wall": summarise(wall, unit, mode=MODE_COLD_START),
+            "init": summarise(
+                init,
+                "ms, module import through Chroma client and embedder ready",
+                mode=MODE_COLD_START,
+            ),
+            "op": summarise(
+                operation,
+                "ms, the operation alone, on a ready process",
+                mode=MODE_COLD_START,
+            ),
+            "overhead": summarise(
+                overhead,
+                "ms, interpreter startup and teardown (wall - init - op)",
+                mode=MODE_COLD_START,
+            ),
+            "detail": details[-1] if details else {},
+        }
+
+    def _cold_start_probe(self, kind: str, collection_name: str) -> Tuple[dict, float]:
+        """Run one child and time the whole subprocess from the outside.
+
+        ``sys.executable`` is invoked directly rather than through the shell or
+        a wrapper, so the venv re-exec bootstrap at the top of this file cannot
+        fire in the child: a doubled interpreter startup would be measurement
+        noise attributed to Chroma. ``RAG_BENCH_NO_REEXEC`` says the same thing
+        a second way, because the invariant matters more than the mechanism.
+
+        ``RAG_COLLECTION`` is set to the bench collection so that even the
+        child's ambient default — the one ``raglog`` computes at import — is a
+        bench namespace and never the working collection.
+        """
+        env = dict(os.environ)
+        env["RAG_COLLECTION"] = collection_name
+        env["RAG_LOG_QUIET"] = "1"
+        env["RAG_BENCH_NO_REEXEC"] = "1"
+        env["ANONYMIZED_TELEMETRY"] = "False"
+        env["CHROMA_ANONYMIZED_TELEMETRY"] = "False"
+        env.pop("RAG_PROFILE", None)
+
+        argv = [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "--cold-start-probe",
+            kind,
+            "--profile",
+            self.name,
+            "--corpus",
+            str(self.corpus),
+            "--collection",
+            collection_name,
+            "-k",
+            str(self.k),
+        ]
+        started = time.perf_counter()
+        completed = subprocess.run(
+            argv, capture_output=True, text=True, env=env, cwd=str(RAG_ROOT)
+        )
+        wall_ms = (time.perf_counter() - started) * 1000.0
+
+        if completed.returncode != 0:
+            raise RuntimeError(
+                "cold-start %s probe failed (exit %d): %s"
+                % (kind, completed.returncode, (completed.stderr or "").strip()[:400])
+            )
+        for line in (completed.stdout or "").splitlines():
+            if line.startswith(COLD_START_SENTINEL):
+                return json.loads(line[len(COLD_START_SENTINEL):]), wall_ms
+        raise RuntimeError(
+            "cold-start %s probe printed no result line; stdout was %r"
+            % (kind, (completed.stdout or "")[:400])
+        )
 
     # -- retrieval quality (untimed) ----------------------------------------
 
@@ -1312,6 +1937,103 @@ class ProfileBench:
             "problems": problems,
         }
 
+    # -- token-budget retrieval (untimed) ------------------------------------
+
+    def op_token_budget(self) -> dict:
+        """Score the labelled set again, under a fixed context budget.
+
+        Untimed, and run in the same place as quality scoring — after every
+        timed operation — so it cannot perturb a latency sample.
+
+        The retrieval depth is deliberately far wider than k: the budget, not
+        the rank cutoff, is what is supposed to bind. Chunks are then walked in
+        rank order and admitted while the running total stays within budget,
+        stopping at the first that would exceed it.
+        """
+        collection = self._collection()
+        total = collection.count()
+        depth = max(1, min(total, BUDGET_RETRIEVAL_CAP))
+        labels = [dict(entry) for entry in self.truth["queries"]]  # type: ignore
+        no_answer_query = str(self.truth["no_answer_query"])
+        problems: List[str] = []
+
+        def ranked_chunks(query: str) -> List[Tuple[str, str]]:
+            raw = collection.query(
+                query_texts=[query],
+                n_results=depth,
+                include=["documents", "metadatas"],
+            )
+            documents = (raw.get("documents") or [[]])[0]
+            metadatas = (raw.get("metadatas") or [[]])[0]
+            out: List[Tuple[str, str]] = []
+            for position, document in enumerate(documents):
+                metadata = metadatas[position] if position < len(metadatas) else {}
+                out.append((metadata.get("source", "?"), document or ""))
+            return out
+
+        # One retrieval per query, reused across budgets: the ranking does not
+        # depend on the budget, only the admission does.
+        ranked_by_query = {
+            str(entry["query"]): ranked_chunks(str(entry["query"])) for entry in labels
+        }
+        ranked_control = ranked_chunks(no_answer_query)
+
+        by_budget: Dict[str, object] = {}
+        for budget in self.budgets:
+            scored: List[Dict[str, object]] = []
+            for entry in labels:
+                result = score_budget(
+                    ranked_by_query[str(entry["query"])],
+                    entry["relevant"],  # type: ignore[arg-type]
+                    budget,
+                )
+                result["id"] = entry["id"]
+                result["query"] = entry["query"]
+                scored.append(result)
+
+            # Same contract as the equal-k control: a query no document answers
+            # must score zero recall however the context is packed. If it does
+            # not, the labels are being read off the retriever's own output.
+            control = score_budget(ranked_control, [], budget)
+            control["query"] = no_answer_query
+            if control["recall@budget"]:
+                raise RuntimeError(
+                    "unanswerable control scored recall@budget %s at budget %d - "
+                    "the labels are not independent of the retriever"
+                    % (control["recall@budget"], budget)
+                )
+
+            by_budget[str(budget)] = {
+                "aggregate": aggregate_budget(scored),
+                "per_query": scored,
+                "control_unanswerable": dict(control, scored_zero=True),
+            }
+
+        return {
+            "measured": True,
+            "timed": False,
+            "measured_after": "all timed ops; excluded from every latency sample",
+            "budgets": list(self.budgets),
+            "headline_budget": HEADLINE_BUDGET,
+            "retrieval_depth_chunks": depth,
+            "retrieval_depth_note": (
+                "min(collection.count(), %d): the budget is meant to bind, not "
+                "the rank cutoff" % BUDGET_RETRIEVAL_CAP
+            ),
+            "token_approximation": (
+                "ceil(len(text) / 4) - a character heuristic, not a tokenizer; "
+                "applied identically to every profile"
+            ),
+            "admission_rule": (
+                "greedy prefix: walk the ranked chunks in order and admit each "
+                "while the running total stays within budget, stopping at the "
+                "first chunk that would exceed it. Not skip-and-continue, which "
+                "is a different retriever and would flatter small chunks"
+            ),
+            "by_budget": by_budget,
+            "problems": problems,
+        }
+
     # -- driver -------------------------------------------------------------
 
     def run(self) -> dict:
@@ -1325,8 +2047,18 @@ class ProfileBench:
         update_samples, update_notes = self.op_update()
         delete_samples, consistency_samples, delete_notes = self.op_delete()
 
-        # Untimed, and strictly last: no latency sample above can contain it.
+        # After the four timed ops, so nothing above can have observed a query
+        # issued here — and before the untimed scoring, so the collection is in
+        # the state Delete left it in for both.
+        stages = self.op_stages()
+        cold_start = {
+            "read": self.op_cold_start("read"),
+            "create": self.op_cold_start("create"),
+        }
+
+        # Untimed, and strictly last: no latency sample above can contain them.
         quality = self.op_quality()
+        token_budget = self.op_token_budget()
 
         chunk_sizes = [
             len(chunk.text)
@@ -1338,6 +2070,9 @@ class ProfileBench:
             "collection": self.collection_name,
             "indexed_chunks": indexed,
             "quality": quality,
+            "token_budget": token_budget,
+            "read_stages": stages,
+            "cold_start": cold_start,
             "chunking_observed": {
                 "files": len(list(self.corpus.glob("*.md"))),
                 "chunks": len(chunk_sizes),
@@ -1409,26 +2144,50 @@ def render_table(report: dict) -> str:
             observed["chars_mean"],
         )
     )
+    runs_per_op = harness["runs_per_op"]
     lines.append(
-        "harness     runs=%s  queries=%s  k=%s  network=%s"
-        % (harness["runs"], len(harness["queries"]), harness["k"], harness["network"])
+        "harness     runs %s  queries=%s  k=%s  network=%s"
+        % (
+            " ".join("%s=%s" % (op, runs_per_op[op]) for op in sorted(runs_per_op)),
+            len(harness["queries"]),
+            harness["k"],
+            harness["network"],
+        )
+    )
+    lines.append(
+        "statistics  median/min/max/MAD always; P50/P95 only at n>=%d; no P99 at any n"
+        % harness.get("percentile_min_n", PERCENTILE_MIN_N)
     )
     lines.append("")
-    header = "%-9s %-46s %9s %9s %9s %9s" % ("op", "unit", "cold", "P50", "P95", "P99")
+    lines.append("mode: warm (many operations in one process, model loaded, cache hot)")
+    header = "%-9s %-38s %5s %9s %9s %9s %9s %9s %9s" % (
+        "op",
+        "unit",
+        "n",
+        "median",
+        "MAD",
+        "min",
+        "max",
+        "P50",
+        "P95",
+    )
     lines.append(header)
     lines.append("-" * len(header))
 
-    def row(label: str, stats: dict) -> str:
-        def fmt(value):
-            return "-" if value is None else "%9.2f" % value
+    def _cell(value) -> str:
+        return "        -" if value is None else "%9.2f" % value
 
-        return "%-9s %-46s %s %s %s %s" % (
+    def row(label: str, stats: dict) -> str:
+        return "%-9s %-38s %5d %s %s %s %s %s %s" % (
             label,
-            stats["unit"][:46],
-            fmt(stats["cold_ms"]),
-            fmt(stats["p50_ms"]),
-            fmt(stats["p95_ms"]),
-            fmt(stats["p99_ms"]),
+            stats["unit"][:38],
+            stats["n"],
+            _cell(stats["median_ms"]),
+            _cell(stats["mad_ms"]),
+            _cell(stats["min_ms"]),
+            _cell(stats["max_ms"]),
+            _cell(stats.get("p50_ms")),
+            _cell(stats.get("p95_ms")),
         )
 
     ops = report["ops"]
@@ -1438,9 +2197,15 @@ def render_table(report: dict) -> str:
     lines.append(row("delete", ops["delete"]))
     lines.append(row("  +lag", ops["delete"]["consistency"]))
     lines.append("")
-    lines.append("read, per query (P50 / P95 ms):")
+    lines.append("read, per query (median / MAD ms):")
     for query, stats in ops["read"]["per_query"].items():
-        lines.append("  %-52s %8.2f %8.2f" % (query[:52], stats["p50_ms"], stats["p95_ms"]))
+        lines.append(
+            "  %-52s %8.2f %8.2f" % (query[:52], stats["median_ms"], stats["mad_ms"])
+        )
+    lines.append("")
+    lines.append(render_stages(report.get("read_stages")))
+    lines.append("")
+    lines.append(render_cold_start(report.get("cold_start")))
     lines.append("")
     lines.append(
         "delete verified: %d/%d runs left 0 chunks and 0 probe hits from the deleted note"
@@ -1464,7 +2229,159 @@ def render_table(report: dict) -> str:
     )
     lines.append("")
     lines.append(render_quality(report.get("quality")))
+    lines.append("")
+    lines.append(render_token_budget(report.get("token_budget")))
     lines.append("=" * 78)
+    return "\n".join(lines)
+
+
+def render_stages(stages: Optional[dict]) -> str:
+    if not stages:
+        return "read stages: not measured"
+    lines: List[str] = []
+    lines.append(
+        "read latency by stage (mode %s, n=%d — %s):"
+        % (stages["mode"], stages["n"], stages["n_note"])
+    )
+    header = "  %-26s %9s %9s %9s %9s" % ("stage", "median", "MAD", "min", "max")
+    lines.append(header)
+    lines.append("  " + "-" * (len(header) - 2))
+
+    def row(label: str, block: dict, marker: str = "") -> str:
+        return "  %-26s %9.3f %9.3f %9.3f %9.3f%s" % (
+            label[:26],
+            block["median_ms"],
+            block["mad_ms"],
+            block["min_ms"],
+            block["max_ms"],
+            marker,
+        )
+
+    for key, label in (
+        ("query_embedding", "query embedding"),
+        ("vector_search", "vector search"),
+        ("result_materialization", "result materialization"),
+    ):
+        lines.append(row(label, stages["stages"][key]))
+    lines.append(
+        "  %-26s %9.3f" % ("= sum of stages", stages["stage_sum_median_ms"])
+    )
+    lines.append(row("full in-process read", stages["full_in_process_read"]))
+    lines.append(
+        "  residual %.2f%% of the full read (limit %.1f%%) — %s"
+        % (
+            stages["stage_residual_pct"],
+            stages["stage_residual_limit_pct"],
+            "closes" if stages["stage_residual_closes"] else "DOES NOT CLOSE",
+        )
+    )
+    lines.append(
+        "  query embedding is %.1f%% of the full in-process read"
+        % stages["embedding_share_of_read_pct"]
+    )
+    lines.append(
+        "  materialization samples floored at zero: %d of %d"
+        % (stages["materialization_floored_samples"], stages["n"])
+    )
+    mcp = stages.get("mcp_roundtrip") or {}
+    if mcp:
+        lines.append(
+            "  %-26s %9.3f %9.3f %9.3f %9.3f   (n=%d, envelope — NOT part of the sum)"
+            % (
+                "full MCP round-trip",
+                mcp["median_ms"],
+                mcp["mad_ms"],
+                mcp["min_ms"],
+                mcp["max_ms"],
+                mcp["n"],
+            )
+        )
+        lines.append("  MCP server read collection %s" % mcp["collection"])
+    return "\n".join(lines)
+
+
+def render_cold_start(cold: Optional[dict]) -> str:
+    if not cold:
+        return "cold start: not measured"
+    lines: List[str] = []
+    first = next(iter(cold.values()))
+    lines.append(
+        "cold start (mode %s, n=%d — a fresh process per sample, median/min/max "
+        "only; N=%d earns no percentile of any kind):"
+        % (
+            first["process_wall"]["mode"],
+            first["process_wall"]["n"],
+            first["process_wall"]["n"],
+        )
+    )
+    header = "  %-12s %-22s %5s %10s %10s %10s" % (
+        "operation",
+        "component",
+        "n",
+        "median",
+        "min",
+        "max",
+    )
+    lines.append(header)
+    lines.append("  " + "-" * (len(header) - 2))
+    for operation, block in cold.items():
+        for key, label in (
+            ("process_wall", "process wall (total)"),
+            ("init", "  init"),
+            ("op", "  operation"),
+            ("overhead", "  startup/teardown"),
+        ):
+            stats = block[key]
+            lines.append(
+                "  %-12s %-22s %5d %10.2f %10.2f %10.2f"
+                % (
+                    operation if key == "process_wall" else "",
+                    label,
+                    stats["n"],
+                    stats["median_ms"],
+                    stats["min_ms"],
+                    stats["max_ms"],
+                )
+            )
+    return "\n".join(lines)
+
+
+def render_token_budget(budget: Optional[dict]) -> str:
+    if not budget:
+        return "token budget: not measured"
+    lines: List[str] = []
+    lines.append(
+        "token-budget retrieval (untimed; %s; %s):"
+        % (budget["token_approximation"], budget["retrieval_depth_note"])
+    )
+    header = "  %6s %12s %11s %11s %11s %11s %11s" % (
+        "budget",
+        "recall@bud",
+        "uniq docs",
+        "chunks",
+        "tokens",
+        "dup rate",
+        "rel tok frac",
+    )
+    lines.append(header)
+    lines.append("  " + "-" * (len(header) - 2))
+    for key in sorted(budget["by_budget"], key=int):
+        aggregate = budget["by_budget"][key]["aggregate"]
+        lines.append(
+            "  %6s %12.3f %11.3f %11.3f %11.1f %11.3f %11.3f"
+            % (
+                key,
+                aggregate["recall@budget"],
+                aggregate["unique_docs"],
+                aggregate["chunks_admitted"],
+                aggregate["tokens_used"],
+                aggregate["duplicate_source_rate"],
+                aggregate["relevant_token_fraction"],
+            )
+        )
+    lines.append(
+        "  control: the unanswerable query scored recall 0 at every budget"
+    )
     return "\n".join(lines)
 
 
@@ -1618,8 +2535,23 @@ def render_benchmarks(reports: List[dict]) -> str:
     names = [r["profile"]["name"] for r in ordered]
     harness = ordered[0]["harness"]
     corpus = harness["corpus"]
-    runs = {r["harness"]["runs"] for r in ordered}
     stamps = {r["date"] for r in ordered}
+
+    # Every table below states its own N. A run whose profiles disagree about
+    # how many samples an operation got cannot be rendered as one table, so the
+    # generator refuses rather than printing a number over an ambiguous N.
+    runs_per_op: Dict[str, int] = dict(harness["runs_per_op"])
+    for report in ordered[1:]:
+        if dict(report["harness"]["runs_per_op"]) != runs_per_op:
+            raise RuntimeError(
+                "result files disagree about sample sizes (%s vs %s); a table "
+                "that cannot state its own N must not be rendered"
+                % (runs_per_op, report["harness"]["runs_per_op"])
+            )
+    percentile_min_n = int(harness.get("percentile_min_n", PERCENTILE_MIN_N))
+
+    def runs_of(op: str) -> int:
+        return int(runs_per_op[op])
 
     lines: List[str] = []
     lines.append("# Benchmarks")
@@ -1635,6 +2567,12 @@ def render_benchmarks(reports: List[dict]) -> str:
     lines.append("")
     lines.append("    ./install.sh && python bench.py --all --corpus bench/corpus")
     lines.append("")
+    lines.append(
+        "What produced the numbers below. **This table has no N and no mode of "
+        "its own — it is where the N and the modes for every other table are "
+        "declared.**"
+    )
+    lines.append("")
     lines.extend(
         _table(
             ["", ""],
@@ -1642,7 +2580,20 @@ def render_benchmarks(reports: List[dict]) -> str:
                 ["source files", ", ".join("`bench/results/%s`" % r["_path"] for r in ordered)],
                 ["run date", ", ".join(sorted(stamps))],
                 ["profiles", ", ".join("`%s`" % n for n in names)],
-                ["runs per operation", ", ".join(str(n) for n in sorted(runs))],
+                [
+                    "samples per operation",
+                    ", ".join(
+                        "%s **%d**" % (op.replace("_", " "), runs_per_op[op])
+                        for op in ("create", "read", "update", "delete", "cold_start")
+                        if op in runs_per_op
+                    ),
+                ],
+                [
+                    "modes",
+                    "`%s` (many operations in one process) and `%s` (a fresh "
+                    "process per sample), never mixed in one table"
+                    % (MODE_WARM, MODE_COLD_START),
+                ],
                 [
                     "corpus",
                     "`bench/corpus/` — %s files, %s characters, seed %s, %s planted facts"
@@ -1665,6 +2616,12 @@ def render_benchmarks(reports: List[dict]) -> str:
 
     # --- environment --------------------------------------------------------
     lines.append("## Environment")
+    lines.append("")
+    lines.append(
+        "The machine every figure below was produced on. **No N and no mode: "
+        "this is not a measurement**, it is the configuration the measurements "
+        "were taken in."
+    )
     lines.append("")
     environments = [r["harness"].get("environment") or {} for r in ordered]
     base = environments[0]
@@ -1717,44 +2674,119 @@ def render_benchmarks(reports: List[dict]) -> str:
 
     lines.append("## Method")
     lines.append("")
-    runs_text = "/".join(str(n) for n in sorted(runs))
     lines.append(
-        "Four operations are timed, N=%s runs each, against a synthetic corpus "
-        "generated deterministically from seed %s and shipped in this "
-        "repository as `bench/corpus/`. The corpus on disk is compared "
-        "byte-for-byte with the generator's output before anything is "
-        "measured, and the run fails loudly if they differ — otherwise the "
-        "numbers would describe a corpus nobody can see."
-        % (runs_text, corpus.get("seed"))
+        "Four operations are timed against a synthetic corpus generated "
+        "deterministically from seed %s and shipped in this repository as "
+        "`bench/corpus/`. The corpus on disk is compared byte-for-byte with the "
+        "generator's output before anything is measured, and the run fails "
+        "loudly if they differ — otherwise the numbers would describe a corpus "
+        "nobody can see." % corpus.get("seed")
     )
     lines.append("")
     lines.extend(
         _table(
-            ["operation", "what is timed"],
+            ["operation", "N", "mode", "what is timed"],
             [
-                ["create", "a full index build of the whole corpus"],
+                [
+                    "create",
+                    str(runs_of("create")),
+                    MODE_WARM,
+                    "a full index build of the whole corpus",
+                ],
                 [
                     "read",
+                    str(runs_of("read")),
+                    MODE_WARM,
                     "one pass over %d fixed queries at k=%s, fixed order, no sampling"
                     % (len(harness.get("queries") or []), harness.get("k")),
                 ],
-                ["update", "re-index of a single changed note"],
-                ["delete", "removal of one note"],
+                [
+                    "update",
+                    str(runs_of("update")),
+                    MODE_WARM,
+                    "re-index of a single changed note",
+                ],
+                ["delete", str(runs_of("delete")), MODE_WARM, "removal of one note"],
                 [
                     "delete +lag",
+                    str(runs_of("delete")),
+                    MODE_WARM,
                     "time until the removed note stops being returned by a probe query",
+                ],
+                [
+                    "cold start",
+                    str(runs_of("cold_start")),
+                    MODE_COLD_START,
+                    "a fresh subprocess per sample, one operation each",
                 ],
             ],
         )
     )
     lines.append("")
+    earns = [op for op in TIMED_OPS if runs_of(op) >= percentile_min_n]
+    denied = [op for op in TIMED_OPS if runs_of(op) < percentile_min_n]
+
+    def _op_list(ops: List[str]) -> str:
+        return ", ".join("%s (N=%d)" % (op, runs_of(op)) for op in ops)
+
+    if earns and denied:
+        gate = "So %s carry percentiles; %s do not, and report a median with a MAD instead." % (
+            _op_list(earns),
+            _op_list(denied),
+        )
+    elif earns:
+        gate = "Every operation here is sampled to at least %d, so all of them carry percentiles: %s." % (
+            percentile_min_n,
+            _op_list(earns),
+        )
+    else:
+        gate = (
+            "No operation in this run reaches %d samples, so **no percentile is "
+            "rendered anywhere below** — every latency figure is a median with a "
+            "MAD, a minimum and a maximum. This is a reduced-sample run: %s."
+            % (percentile_min_n, _op_list(denied))
+        )
     lines.append(
-        "**Percentiles, not means.** A mean over N=%s runs hides the shape that "
-        "matters here: the first run of any operation pays for a cold cache and "
-        "the rest do not, so an average is a blend of two different things. P50 "
-        "answers \"what does this cost normally\"; P95 answers \"how bad is the "
-        "tail\"; the cold column is reported separately rather than being "
-        "averaged into either." % runs_text
+        "**Each operation has its own N, and the statistics are gated on it.** "
+        "The four operations differ by two orders of magnitude in cost, so one "
+        "N for the harness either starves the cheap operations of samples or "
+        "makes the expensive ones unrunnable. Median, minimum, maximum and "
+        "median absolute deviation are reported for every operation: they are "
+        "statements about the samples in hand. **P50 and P95 are reported only "
+        "at N ≥ %d** — below that a percentile is an interpolation between two "
+        "neighbouring samples presented as a property of a distribution. %s"
+        % (percentile_min_n, gate)
+    )
+    lines.append("")
+    lines.append(
+        "**There is no P99 in this document, at any N.** Not suppressed — not "
+        "computed. At N=%d the 99th percentile is an interpolation between the "
+        "two largest samples, which is a way of printing the maximum and "
+        "calling it a tail statistic; at N=%d it simply *is* the maximum. No "
+        "sample count used anywhere in this harness earns one, so the code does "
+        "not produce one."
+        % (percentile_min_n, runs_of("create"))
+    )
+    lines.append("")
+    lines.append(
+        "**MAD rather than standard deviation at small N.** The median absolute "
+        "deviation — `median(|x - median(x)|)` — asks how far a typical sample "
+        "sits from a typical sample. A standard deviation assumes the tail was "
+        "sampled and is dragged around by the one slow run every process has, "
+        "which at N=%d is a statement about scheduling luck rather than about "
+        "the operation. Both are in the result JSONs; the tables show the MAD."
+        % runs_of("create")
+    )
+    lines.append("")
+    lines.append(
+        "**Two modes, named, never mixed.** `%s` is many operations in one "
+        "process: the model is loaded, the OS cache is hot, and the marginal "
+        "cost of one more operation is what is being measured. `%s` is a fresh "
+        "subprocess per sample, which pays interpreter startup, module import, "
+        "Chroma client construction and the ONNX model load before it does any "
+        "work. Every table below states which mode produced it. The four timed "
+        "operations and the stage split are warm; the cold-start section is not."
+        % (MODE_WARM, MODE_COLD_START)
     )
     lines.append("")
     lines.append(
@@ -1790,6 +2822,81 @@ def render_benchmarks(reports: List[dict]) -> str:
         "independent of the retriever."
     )
     lines.append("")
+    budget0 = ordered[0].get("token_budget") or {}
+    stages0 = ordered[0].get("read_stages") or {}
+    lines.append(
+        "**Read latency is decomposed, and the decomposition has to close.** "
+        "Query embedding, vector search and result materialization are timed "
+        "separately on the same query in the same iteration, N=%d pass%s over "
+        "the %d fixed queries. Materialization is a *difference* of two "
+        "measurements — the same search with and without documents, metadatas "
+        "and distances — so on an individual sample it can come out negative; "
+        "those samples are floored at zero and **counted**, and the count is in "
+        "the table. The three stages are required to sum to within %.0f%% of "
+        "the full in-process read, and a run whose split does not close fails "
+        "rather than publishing a decomposition that does not add up."
+        % (
+            runs_of("read"),
+            "" if runs_of("read") == 1 else "es",
+            len(harness.get("queries") or []),
+            float(stages0.get("stage_residual_limit_pct") or STAGE_RESIDUAL_LIMIT_PCT),
+        )
+    )
+    lines.append("")
+    lines.append(
+        "The full MCP round-trip is measured alongside them, over stdio, at "
+        "N=%s. It is an **outer envelope, not a summand**: it contains a "
+        "process hop, JSON-RPC framing on both sides and the server's own "
+        "formatting work on top of everything the in-process stages measure. "
+        "The `initialize` handshake and one warm-up call happen outside the "
+        "timed samples, so what is timed is request→response on a warm server. "
+        "The server is launched against this harness's own collection and its "
+        "first reply is checked to name a corpus document — a round trip that "
+        "answered from some other collection is a failed run, not a fast one."
+        % _fmt((stages0.get("mcp_roundtrip") or {}).get("n"))
+    )
+    lines.append("")
+    lines.append(
+        "**Retrieval is scored twice: at equal k, and under a token budget.** "
+        "Equal k is not a fair comparison across chunk geometries — %d chunks "
+        "of %s characters and %d chunks of %s characters are not the same "
+        "context. The budget-constrained scoring retrieves the top %s chunks "
+        "and then admits them under a fixed budget, which is the constraint a "
+        "caller actually has."
+        % (
+            harness.get("k"),
+            _fmt(min(r["chunking_observed"]["chars_mean"] for r in ordered), 1),
+            harness.get("k"),
+            _fmt(max(r["chunking_observed"]["chars_mean"] for r in ordered), 1),
+            _fmt(budget0.get("retrieval_depth_chunks")),
+        )
+    )
+    lines.append("")
+    lines.append(
+        "Two rules of that scoring have to be stated, because a reader cannot "
+        "check the numbers without them:"
+    )
+    lines.append("")
+    lines.append(
+        "1. *Tokens are approximated as `ceil(len(text) / 4)`.* **This is a "
+        "character heuristic, not a tokenizer.** Real BPE counts move with "
+        "vocabulary, casing and whitespace, and this approximation will be "
+        "wrong for any specific model — discount the absolute token figures "
+        "accordingly. It is applied identically to every profile, so it cannot "
+        "favour one of them; what it cannot support is a claim about a real "
+        "model's context window."
+    )
+    lines.append(
+        "2. *Admission is a greedy **prefix**.* Chunks are walked in rank order "
+        "and admitted while the running total stays within budget; the walk "
+        "**stops** at the first chunk that would exceed it. It does not skip "
+        "that chunk and carry on down the ranking. Skip-and-continue is a "
+        "different retriever and a flattering one: it would let a profile with "
+        "many small chunks backfill the remaining budget with lower-ranked text "
+        "while a profile with large chunks got truncated, and the comparison "
+        "would then be measuring the packer rather than the chunking."
+    )
+    lines.append("")
     lines.append(
         "**Offline by design, and checked.** A socket guard is installed before "
         "anything heavy is imported; loopback and unix sockets stay allowed, "
@@ -1800,7 +2907,14 @@ def render_benchmarks(reports: List[dict]) -> str:
     lines.append("")
 
     # --- latency ------------------------------------------------------------
-    lines.append("## Latency")
+    lines.append("## Latency — mode `%s`" % MODE_WARM)
+    lines.append("")
+    lines.append(
+        "Many operations in one process: the model is loaded, the OS cache is "
+        "hot, and what is measured is the marginal cost of one more operation. "
+        "This is v1's only mode, named honestly. For the cost of the first "
+        "operation in a fresh process, see [Cold start](#cold-start)."
+    )
     lines.append("")
     op_labels = [
         ("create", "create", None),
@@ -1809,20 +2923,26 @@ def render_benchmarks(reports: List[dict]) -> str:
         ("delete", "delete", None),
         ("delete", "delete +lag", "consistency"),
     ]
-    lines.append("P50, milliseconds:")
+    lines.append("Median, milliseconds. **Mode `%s`; N per row in the `n` column:**" % MODE_WARM)
     lines.append("")
     rows = []
     for op_key, label, nested in op_labels:
-        row = [label]
+        stats0 = ordered[0]["ops"][op_key]
+        if nested:
+            stats0 = stats0[nested]
+        row = [label, str(stats0["n"])]
         for report in ordered:
             stats = report["ops"][op_key]
             if nested:
                 stats = stats[nested]
-            row.append(_fmt(stats["p50_ms"]))
+            row.append(_fmt(stats["median_ms"]))
         rows.append(row)
-    lines.extend(_table(["operation (P50 ms)"] + names, rows))
+    lines.extend(_table(["operation (median ms)", "n"] + names, rows))
     lines.append("")
-    lines.append("Full distribution, milliseconds:")
+    lines.append(
+        "Full distribution, milliseconds. `P50`/`P95` are blank where N < %d; "
+        "there is no P99 column because no N here earns one:" % percentile_min_n
+    )
     lines.append("")
     rows = []
     for report in ordered:
@@ -1834,18 +2954,40 @@ def render_benchmarks(reports: List[dict]) -> str:
                 [
                     report["profile"]["name"],
                     label,
+                    str(stats["mode"]),
                     str(stats["n"]),
-                    _fmt(stats["cold_ms"]),
-                    _fmt(stats["p50_ms"]),
-                    _fmt(stats["p95_ms"]),
-                    _fmt(stats["p99_ms"]),
+                    _fmt(stats["median_ms"]),
+                    _fmt(stats["mad_ms"]),
+                    _fmt(stats["min_ms"]),
+                    _fmt(stats["max_ms"]),
+                    _fmt(stats.get("p50_ms")),
+                    _fmt(stats.get("p95_ms")),
                 ]
             )
     lines.extend(
-        _table(["profile", "operation", "n", "cold", "P50", "P95", "P99"], rows)
+        _table(
+            [
+                "profile",
+                "operation",
+                "mode",
+                "n",
+                "median",
+                "MAD",
+                "min",
+                "max",
+                "P50",
+                "P95",
+            ],
+            rows,
+        )
     )
     lines.append("")
-    lines.append("Corpus as each profile cut it:")
+    lines.append(
+        "Corpus as each profile cut it. **No N and no mode: this is not a "
+        "sampled measurement.** It is a deterministic property of the chunker "
+        "applied to a fixed corpus — running it again produces the same numbers, "
+        "which is why there is nothing to take a median of:"
+    )
     lines.append("")
     rows = []
     for report in ordered:
@@ -1878,8 +3020,269 @@ def render_benchmarks(reports: List[dict]) -> str:
     )
     lines.append("")
 
+    # --- cold start ---------------------------------------------------------
+    cold_n = runs_of("cold_start")
+    lines.append("## Cold start")
+    lines.append("")
+    lines.append(
+        "**mode `%s`, n=%d per cell.** A fresh subprocess per sample, invoked "
+        "directly so the interpreter starts exactly once. Each sample pays "
+        "module import, Chroma client construction and the ONNX model load "
+        "before it does any work. `process wall` is measured by the parent "
+        "around the whole subprocess and is the headline; `init` and `operation` "
+        "are the child's own split of it; `startup/teardown` is what is left "
+        "over — `wall − (init + operation)` — reported rather than absorbed "
+        "into either neighbour."
+        % (MODE_COLD_START, cold_n)
+    )
+    lines.append("")
+    lines.append(
+        "**Median, minimum and maximum only.** N=%d earns no percentile of any "
+        "kind, and none is shown." % cold_n
+    )
+    lines.append("")
+    for operation, caption in (
+        ("read", "one pass over the %d fixed queries" % len(harness.get("queries") or [])),
+        ("create", "a full index build, in a fresh process"),
+    ):
+        lines.append("`%s` — %s:" % (operation, caption))
+        lines.append("")
+        rows = []
+        for report in ordered:
+            block = (report.get("cold_start") or {}).get(operation) or {}
+            for key, label in (
+                ("process_wall", "process wall (total)"),
+                ("init", "init"),
+                ("op", "operation"),
+                ("overhead", "startup/teardown"),
+            ):
+                stats = block.get(key) or {}
+                rows.append(
+                    [
+                        report["profile"]["name"],
+                        label,
+                        str(stats.get("mode")),
+                        str(stats.get("n")),
+                        _fmt(stats.get("median_ms")),
+                        _fmt(stats.get("min_ms")),
+                        _fmt(stats.get("max_ms")),
+                    ]
+                )
+        lines.extend(
+            _table(
+                ["profile", "component", "mode", "n", "median", "min", "max"], rows
+            )
+        )
+        lines.append("")
+
+    warm_read = ordered[0]["ops"]["read"]["median_ms"]
+    cold_read = (
+        ((ordered[0].get("cold_start") or {}).get("read") or {}).get("process_wall") or {}
+    ).get("median_ms")
+    if cold_read:
+        lines.append(
+            "On `%s` the same read pass costs %s ms warm and %s ms from a fresh "
+            "process — a factor of **%.0fx**, essentially all of it paid before "
+            "the first query is issued. v1 reported a `cold` column that was the "
+            "first sample of a warm loop, in a process that had already imported "
+            "everything and loaded the model; that column is gone."
+            % (
+                ordered[0]["profile"]["name"],
+                _fmt(warm_read),
+                _fmt(cold_read),
+                float(cold_read) / float(warm_read),
+            )
+        )
+        lines.append("")
+    lines.append(
+        "**This is a cold *process*, not a cold *machine*.** The OS page cache "
+        "still holds the ONNX model file after the first sample, and it is not "
+        "purged between samples — purging it needs privileges this harness does "
+        "not take. The first sample of the first profile pays a genuinely cold "
+        "file read; the rest do not. Treat these figures as the cost of starting "
+        "a new process on a machine that has run this before, which is the "
+        "common case for a CLI, and not as a first-boot number."
+    )
+    lines.append("")
+
+    # --- read, by stage -----------------------------------------------------
+    lines.append("## Where the read time goes")
+    lines.append("")
+    lines.append(
+        "**mode `%s`, n=%s per profile** (%d pass%s over %d fixed queries). "
+        "Milliseconds per query."
+        % (
+            MODE_WARM,
+            _fmt(stages0.get("n")),
+            runs_of("read"),
+            "" if runs_of("read") == 1 else "es",
+            len(harness.get("queries") or []),
+        )
+    )
+    lines.append("")
+    rows = []
+    for report in ordered:
+        stages = report.get("read_stages") or {}
+        blocks = stages.get("stages") or {}
+        mcp = stages.get("mcp_roundtrip") or {}
+        name = report["profile"]["name"]
+        for key, label in (
+            ("query_embedding", "query embedding"),
+            ("vector_search", "vector search"),
+            ("result_materialization", "result materialization"),
+        ):
+            stats = blocks.get(key) or {}
+            rows.append(
+                [
+                    name,
+                    label,
+                    str(stats.get("n")),
+                    _fmt(stats.get("median_ms"), 3),
+                    _fmt(stats.get("mad_ms"), 3),
+                    _fmt(stats.get("min_ms"), 3),
+                    _fmt(stats.get("max_ms"), 3),
+                    "yes",
+                ]
+            )
+        rows.append(
+            [
+                name,
+                "**sum of the three**",
+                "",
+                _fmt(stages.get("stage_sum_median_ms"), 3),
+                "",
+                "",
+                "",
+                "",
+            ]
+        )
+        total = stages.get("full_in_process_read") or {}
+        rows.append(
+            [
+                name,
+                "**full in-process read**",
+                str(total.get("n")),
+                _fmt(total.get("median_ms"), 3),
+                _fmt(total.get("mad_ms"), 3),
+                _fmt(total.get("min_ms"), 3),
+                _fmt(total.get("max_ms"), 3),
+                "is the total",
+            ]
+        )
+        rows.append(
+            [
+                name,
+                "full MCP round-trip",
+                str(mcp.get("n")),
+                _fmt(mcp.get("median_ms"), 3),
+                _fmt(mcp.get("mad_ms"), 3),
+                _fmt(mcp.get("min_ms"), 3),
+                _fmt(mcp.get("max_ms"), 3),
+                "**no — envelope**",
+            ]
+        )
+    lines.extend(
+        _table(
+            ["profile", "stage", "n", "median", "MAD", "min", "max", "in the sum?"],
+            rows,
+        )
+    )
+    lines.append("")
+    lines.append(
+        "How well the decomposition closes, and what had to be floored. Same "
+        "samples as the table above — **mode `%s`, n=%s per profile** — "
+        "restated so the residual is not read against a different N:"
+        % (MODE_WARM, _fmt(stages0.get("n")))
+    )
+    lines.append("")
+    rows = []
+    floored_pct: Dict[str, float] = {}
+    for report in ordered:
+        stages = report.get("read_stages") or {}
+        name = report["profile"]["name"]
+        total_samples = int(stages.get("n") or 0)
+        floored = int(stages.get("materialization_floored_samples") or 0)
+        floored_pct[name] = (100.0 * floored / total_samples) if total_samples else 0.0
+        rows.append(
+            [
+                name,
+                _fmt(stages.get("stage_sum_median_ms"), 3),
+                _fmt((stages.get("full_in_process_read") or {}).get("median_ms"), 3),
+                "%s%%" % _fmt(stages.get("stage_residual_pct"), 2),
+                "%s%%" % _fmt(stages.get("stage_residual_limit_pct"), 0),
+                "%d / %d (%s%%)" % (floored, total_samples, _fmt(floored_pct[name], 1)),
+            ]
+        )
+    lines.extend(
+        _table(
+            [
+                "profile",
+                "sum of stages",
+                "full read",
+                "residual",
+                "limit",
+                "materialization samples floored at 0",
+            ],
+            rows,
+        )
+    )
+    lines.append("")
+    lines.append(
+        "The residual is interpreter and call overhead that belongs to no stage. "
+        "It is inside the %s%% limit on every profile; a run where it is not "
+        "fails and publishes nothing. The floored samples are the ones where "
+        "materialization — the difference between the same search with and "
+        "without its payload — came out negative through measurement noise; "
+        "they are clamped to zero and counted here rather than silently."
+        % _fmt(stages0.get("stage_residual_limit_pct"), 0)
+    )
+    lines.append("")
+    noisy = sorted(
+        (name for name, share in floored_pct.items() if share >= 10.0),
+        key=lambda n: -floored_pct[n],
+    )
+    if noisy:
+        lines.append(
+            "**Do not read the materialization column as a measurement on %s.** "
+            "%s of its samples floored, which means the stage is smaller than "
+            "the run-to-run noise of the two searches it is the difference of. "
+            "Its median is a lower bound on a quantity this clock cannot "
+            "resolve, not an estimate of it. The number is left in the table "
+            "because deleting it would make the three stages appear to sum "
+            "more cleanly than they do; the two stages above it, and the total, "
+            "are measurements."
+            % (
+                " or ".join("`%s`" % n for n in noisy),
+                " and ".join(
+                    "%s%% on `%s`" % (_fmt(floored_pct[n], 1), n) for n in noisy
+                )
+                if len(noisy) > 1
+                else "%s%%" % _fmt(floored_pct[noisy[0]], 1),
+            )
+        )
+        lines.append("")
+    lines.append(
+        "The MCP round-trip is the envelope, not a summand: it adds a process "
+        "hop, JSON-RPC framing on both sides and the server's own result "
+        "formatting on top of everything above it. It is measured at N=%s "
+        "against the same collection, on a server that has already answered one "
+        "untimed query."
+        % _fmt((stages0.get("mcp_roundtrip") or {}).get("n"))
+    )
+    lines.append("")
+
     # --- quality ------------------------------------------------------------
     lines.append("## Retrieval quality")
+    lines.append("")
+    lines.append(
+        "Equal k — every profile retrieves the same *number of chunks*. "
+        "**N = %s labelled queries over %s documents, retrieval depth %s "
+        "chunks.** **No mode applies: this is untimed.** Scoring runs after all "
+        "four timed operations and takes no timing samples, so there is no warm "
+        "or cold-start reading of it to give — the absence of a mode column here "
+        "is a property of the measurement, not an omission."
+        % (truth0.get("queries"), truth0.get("corpus_documents"), depth)
+    )
     lines.append("")
     columns = ["recall@%d" % k for k in ladder] + ["mrr", ndcg_key]
     rows = []
@@ -1911,6 +3314,20 @@ def render_benchmarks(reports: List[dict]) -> str:
         )
         lines.append("")
     lines.append("### Controls")
+    lines.append("")
+    lines.append(
+        "**Also untimed, so again no mode applies.** The two controls carry "
+        "different N and it matters which is which: the deranged-label control "
+        "re-scores the same **%s labelled queries** against document-disjoint "
+        "label sets, so its columns are means over %s queries; the unanswerable "
+        "control is **a single query**, deliberately not one of the %s, and its "
+        "columns are that one query's own scores rather than a mean."
+        % (
+            truth0.get("queries"),
+            truth0.get("queries"),
+            truth0.get("queries"),
+        )
+    )
     lines.append("")
     rows = []
     for report in ordered:
@@ -1962,8 +3379,69 @@ def render_benchmarks(reports: List[dict]) -> str:
     )
     lines.append("")
 
-    # --- the finding --------------------------------------------------------
-    read_p50 = {r["profile"]["name"]: r["ops"]["read"]["p50_ms"] for r in ordered}
+    # --- token budget -------------------------------------------------------
+    budget_keys = sorted((budget0.get("by_budget") or {}), key=int)
+
+    def budget_aggregate(report: dict, key: str) -> Dict[str, object]:
+        block = ((report.get("token_budget") or {}).get("by_budget") or {}).get(key) or {}
+        return dict(block.get("aggregate") or {})
+
+    lines.append("## Retrieval quality under a token budget")
+    lines.append("")
+    lines.append(
+        "The same labelled queries, scored again with the *context* held fixed "
+        "instead of the chunk count. Untimed, run after every timed operation. "
+        "Means over the %s labelled queries. Tokens are `ceil(len(text) / 4)` — "
+        "an approximation, see Method." % truth0.get("queries")
+    )
+    lines.append("")
+    for key in budget_keys:
+        lines.append(
+            "Budget **%s tokens** — **untimed, so no mode applies; means over "
+            "%s labelled queries:**" % (key, truth0.get("queries"))
+        )
+        lines.append("")
+        rows = []
+        for report in ordered:
+            aggregate = budget_aggregate(report, key)
+            rows.append(
+                [
+                    report["profile"]["name"],
+                    _fmt(aggregate.get("recall@budget"), 3),
+                    _fmt(aggregate.get("unique_docs"), 2),
+                    _fmt(aggregate.get("chunks_admitted"), 2),
+                    _fmt(aggregate.get("tokens_used"), 1),
+                    _fmt(aggregate.get("duplicate_source_rate"), 3),
+                    _fmt(aggregate.get("relevant_token_fraction"), 3),
+                ]
+            )
+        lines.extend(
+            _table(
+                [
+                    "profile",
+                    "recall@budget",
+                    "unique docs",
+                    "chunks admitted",
+                    "tokens used",
+                    "duplicate source rate",
+                    "relevant token fraction",
+                ],
+                rows,
+            )
+        )
+        lines.append("")
+    lines.append(
+        "The unanswerable control was run under every budget on every profile "
+        "and scored `recall@budget` 0 in all of them; a non-zero score there "
+        "fails the run, exactly as it does at equal k."
+    )
+    lines.append("")
+
+    # --- the findings -------------------------------------------------------
+    # Both headlines are computed here from the shipped result files, including
+    # the branch in which the second one has nothing flattering to say. A
+    # finding that only renders when it is convenient is not a finding.
+    read_median = {r["profile"]["name"]: r["ops"]["read"]["median_ms"] for r in ordered}
     budgets = {
         r["profile"]["name"]: (r["profile"].get("chunking") or {}).get("max_chars")
         for r in ordered
@@ -1974,50 +3452,127 @@ def render_benchmarks(reports: List[dict]) -> str:
     chunk_count = {r["profile"]["name"]: r["chunking_observed"]["chunks"] for r in ordered}
     quality_by_name = {r["profile"]["name"]: _quality_row(r) for r in ordered}
 
-    read_span = max(read_p50.values()) / min(read_p50.values())
+    read_span = max(read_median.values()) / min(read_median.values())
     budget_span = max(budgets.values()) / min(budgets.values())
     mean_span = max(mean_chunk.values()) / min(mean_chunk.values())
     count_span = max(chunk_count.values()) / min(chunk_count.values())
-    fastest_read = min(read_p50, key=lambda n: read_p50[n])
-    fastest_create = min(ordered, key=lambda r: r["ops"]["create"]["p50_ms"])["profile"]["name"]
-    best_quality = max(
-        quality_by_name,
-        key=lambda n: (
-            quality_by_name[n].get("recall@3", 0.0),
-            quality_by_name[n].get(ndcg_key, 0.0),
-            quality_by_name[n].get("mrr", 0.0),
-        ),
-    )
+    fastest_read = min(read_median, key=lambda n: read_median[n])
+    fastest_create = min(
+        ordered, key=lambda r: r["ops"]["create"]["median_ms"]
+    )["profile"]["name"]
 
-    lines.append("## Finding")
+    def equal_k_key(name: str):
+        aggregate = quality_by_name[name]
+        return (
+            aggregate.get("recall@3", 0.0),
+            aggregate.get(ndcg_key, 0.0),
+            aggregate.get("mrr", 0.0),
+        )
+
+    equal_k_ranking = sorted(quality_by_name, key=equal_k_key, reverse=True)
+    best_quality = equal_k_ranking[0]
+
+    lines.append("## Findings")
+    lines.append("")
+
+    # --- headline 1: where the read time actually goes ----------------------
+    embedding_share = {
+        r["profile"]["name"]: (r.get("read_stages") or {}).get(
+            "embedding_share_of_read_pct"
+        )
+        for r in ordered
+    }
+    stage_medians = {
+        r["profile"]["name"]: {
+            key: ((r.get("read_stages") or {}).get("stages") or {})
+            .get(key, {})
+            .get("median_ms")
+            for key in ("query_embedding", "vector_search", "result_materialization")
+        }
+        for r in ordered
+    }
+    shares = [value for value in embedding_share.values() if value is not None]
+    slowest_read = max(read_median, key=lambda n: read_median[n])
+
+    lines.append("### 1. Read latency is query embedding, not index size")
     lines.append("")
     lines.append(
-        "**Read latency is flat, and timing alone picks the wrong profile.** "
-        "Across the three profiles the P50 of a read pass spans **%.2fx** "
-        "(%.2f ms on `%s`, %.2f ms on `%s`), while the chunk budget spans "
-        "**%.1fx** (%s → %s characters), the mean chunk actually produced spans "
-        "**%.1fx** (%s → %s characters) and the number of chunks in the index "
-        "spans **%.1fx** (%d → %d). A %.1fx change in how the corpus is cut "
-        "moved read latency by %.0f%%."
+        "v1 claimed that on a small index the vector search is nearly free "
+        "relative to MiniLM inference, and inferred it from the fact that read "
+        "latency barely moved when the index size did. v2 measures it: on this "
+        "corpus, **query embedding is %.0f–%.0f%% of the full in-process read** "
+        "across the three profiles. The claim is now backed by the "
+        "decomposition rather than by an absence of variation. Medians, "
+        "**mode `%s`, n=%s per profile** — the same samples as [Where the read "
+        "time goes](#where-the-read-time-goes), restated here:"
+        % (min(shares), max(shares), MODE_WARM, _fmt(stages0.get("n")))
+    )
+    lines.append("")
+    rows = []
+    for name in [r["profile"]["name"] for r in ordered]:
+        medians = stage_medians[name]
+        rows.append(
+            [
+                name,
+                str(chunk_count[name]),
+                _fmt(medians["query_embedding"], 3),
+                _fmt(medians["vector_search"], 3),
+                _fmt(medians["result_materialization"], 3),
+                "**%s%%**" % _fmt(embedding_share[name], 1),
+            ]
+        )
+    lines.extend(
+        _table(
+            [
+                "profile",
+                "chunks in index",
+                "query embedding (ms)",
+                "vector search (ms)",
+                "materialization (ms)",
+                "embedding share of the read",
+            ],
+            rows,
+        )
+    )
+    lines.append("")
+    search_medians = [stage_medians[n]["vector_search"] for n in stage_medians]
+    lines.append(
+        "The vector search itself costs %s–%s ms while the number of chunks in "
+        "the index spans **%.1fx** (%d → %d). The embedding is a fixed cost per "
+        "query that the chunking cannot move, and at this corpus size it "
+        "dominates everything the index does. That is what makes read latency "
+        "look flat: the median read pass spans only **%.2fx** across the three "
+        "profiles (%s ms on `%s`, %s ms on `%s`), against a %.1fx span in the "
+        "chunk budget and a %.1fx span in the mean chunk actually produced "
+        "(%s → %s characters)."
         % (
-            read_span,
-            min(read_p50.values()),
-            fastest_read,
-            max(read_p50.values()),
-            max(read_p50, key=lambda n: read_p50[n]),
-            budget_span,
-            min(budgets.values()),
-            max(budgets.values()),
-            mean_span,
-            _fmt(min(mean_chunk.values()), 1),
-            _fmt(max(mean_chunk.values()), 1),
+            _fmt(min(search_medians), 3),
+            _fmt(max(search_medians), 3),
             count_span,
             min(chunk_count.values()),
             max(chunk_count.values()),
+            read_span,
+            _fmt(min(read_median.values())),
+            fastest_read,
+            _fmt(max(read_median.values())),
+            slowest_read,
             budget_span,
-            (read_span - 1.0) * 100.0,
+            mean_span,
+            _fmt(min(mean_chunk.values()), 1),
+            _fmt(max(mean_chunk.values()), 1),
         )
     )
+    lines.append("")
+    lines.append(
+        "**The scope of that finding is this corpus.** %d to %d chunks is small "
+        "enough that the ANN structure is doing almost nothing; the sentence "
+        "above is about a small index, and nothing here measures where the "
+        "crossover is."
+        % (min(chunk_count.values()), max(chunk_count.values()))
+    )
+    lines.append("")
+
+    lines.append("### 2. Timing alone picks the wrong profile")
     lines.append("")
     if fastest_read == fastest_create:
         cheapest = (
@@ -2032,21 +3587,27 @@ def render_benchmarks(reports: List[dict]) -> str:
             "answer." % (fastest_read, fastest_create)
         )
     lines.append(
-        "That is the unflattering part of the method, stated first: on this "
-        "corpus the timed operations do not separate the profiles on the axis "
-        "that a reader would care about. " + cheapest
+        "On this corpus the timed operations do not separate the profiles on "
+        "the axis a reader would care about. " + cheapest
     )
     lines.append("")
     best = quality_by_name[best_quality]
     lines.append(
-        "**Quality is what decides it.** `%s` leads on `recall@3` (%s) and on "
-        "`%s` (%s), and it is the profile this toolkit ships as its default. "
-        "The full ladder:"
+        "**Quality is what decides it.** At equal k, `%s` leads on `recall@3` "
+        "(%s) and on `%s` (%s), and it is the profile this toolkit ships as its "
+        "default. The full ladder — note that this table deliberately puts three "
+        "different N side by side: the latency columns are **mode `%s`**, read "
+        "at **n=%d** and create at **n=%d**, while the quality columns are "
+        "**untimed** means over **%s labelled queries**:"
         % (
             best_quality,
             _fmt(best.get("recall@3"), 3),
             ndcg_key,
             _fmt(best.get(ndcg_key), 3),
+            MODE_WARM,
+            runs_of("read"),
+            runs_of("create"),
+            truth0.get("queries"),
         )
     )
     lines.append("")
@@ -2058,15 +3619,22 @@ def render_benchmarks(reports: List[dict]) -> str:
             [
                 name,
                 str(budgets[name]),
-                _fmt(read_p50[name]),
-                _fmt(report["ops"]["create"]["p50_ms"]),
+                _fmt(read_median[name]),
+                _fmt(report["ops"]["create"]["median_ms"]),
                 _fmt(aggregate.get("recall@3"), 3),
                 _fmt(aggregate.get(ndcg_key), 3),
             ]
         )
     lines.extend(
         _table(
-            ["profile", "max chars", "read P50", "create P50", "recall@3", ndcg_key],
+            [
+                "profile",
+                "max chars",
+                "read median",
+                "create median",
+                "recall@3",
+                ndcg_key,
+            ],
             rows,
         )
     )
@@ -2078,6 +3646,245 @@ def render_benchmarks(reports: List[dict]) -> str:
         "timed operation above."
     )
     lines.append("")
+
+    # --- headline 2: does the budget change the ranking? --------------------
+    headline_key = str(
+        budget0.get("headline_budget")
+        or (budget_keys[0] if budget_keys else HEADLINE_BUDGET)
+    )
+    if headline_key not in budget_keys and budget_keys:
+        headline_key = budget_keys[0]
+
+    budget_scores = {
+        r["profile"]["name"]: budget_aggregate(r, headline_key) for r in ordered
+    }
+    profile_names = [r["profile"]["name"] for r in ordered]
+
+    # Ranked by the metric alone, with ties left as ties. A tie-break on some
+    # secondary column would manufacture an ordering the metric does not
+    # support, and would hide the most interesting thing a budget comparison can
+    # show: two profiles that equal k separates and a budget does not.
+    _TIE = 5e-7  # both inputs are rounded to 6 dp upstream
+
+    def _relation(left: float, right: float) -> str:
+        if abs(left - right) <= _TIE:
+            return "="
+        return ">" if left > right else "<"
+
+    def _equal_k(name: str) -> float:
+        return float(quality_by_name[name].get("recall@3") or 0.0)
+
+    def _budget(name: str) -> float:
+        return float(budget_scores[name].get("recall@budget") or 0.0)
+
+    def _competition_order(score) -> List[List[str]]:
+        """Names grouped into tiers, best tier first. A tier is a tie."""
+        tiers: List[List[str]] = []
+        for name in sorted(profile_names, key=score, reverse=True):
+            if tiers and abs(score(tiers[-1][0]) - score(name)) <= _TIE:
+                tiers[-1].append(name)
+            else:
+                tiers.append([name])
+        return tiers
+
+    equal_k_tiers = _competition_order(_equal_k)
+    budget_tiers = _competition_order(_budget)
+
+    inversions: List[Tuple[str, str]] = []
+    collapses: List[Tuple[str, str]] = []
+    separations: List[Tuple[str, str]] = []
+    for left in profile_names:
+        for right in profile_names:
+            if left >= right:
+                continue
+            before = _relation(_equal_k(left), _equal_k(right))
+            after = _relation(_budget(left), _budget(right))
+            if before == after:
+                continue
+            if "=" not in (before, after):
+                inversions.append((left, right) if before == ">" else (right, left))
+            elif before == "=":
+                separations.append((left, right) if after == ">" else (right, left))
+            else:
+                collapses.append((left, right) if before == ">" else (right, left))
+
+    def _tier_text(tiers: List[List[str]]) -> str:
+        return " > ".join(" = ".join("`%s`" % n for n in tier) for tier in tiers)
+
+    if inversions:
+        heading = "Equal k and a token budget rank the profiles differently"
+    elif collapses or separations:
+        heading = (
+            "A token budget does not reorder the profiles, but it changes how "
+            "far apart they are"
+        )
+    else:
+        heading = "Equal k and a token budget rank the profiles the same way"
+    lines.append("### 3. %s" % heading)
+    lines.append("")
+    lines.append(
+        "The comparison below is `recall@3` at equal k against `recall@budget` "
+        "at %s tokens. **Both are untimed means over the same %s labelled "
+        "queries, so no mode applies and the two columns share an N** — that is "
+        "what makes them comparable at all. Ties are shown as ties: no "
+        "secondary column is used to break them, because a tie-break would "
+        "invent an ordering the metric does not support — and two profiles that "
+        "equal k separates and a budget does not is precisely the outcome this "
+        "comparison exists to detect."
+        % (headline_key, truth0.get("queries"))
+    )
+    lines.append("")
+    rows = []
+    for name in profile_names:
+        rows.append(
+            [
+                name,
+                _fmt(_equal_k(name), 4),
+                _fmt(_budget(name), 4),
+                _fmt(_budget(name) - _equal_k(name), 4),
+                _fmt(budget_scores[name].get("chunks_admitted"), 2),
+                _fmt(budget_scores[name].get("unique_docs"), 2),
+                _fmt(budget_scores[name].get("duplicate_source_rate"), 3),
+            ]
+        )
+    lines.extend(
+        _table(
+            [
+                "profile",
+                "recall@3 (equal k=%s)" % harness.get("k"),
+                "recall@budget (%s tok)" % headline_key,
+                "delta",
+                "chunks admitted",
+                "unique docs",
+                "duplicate source rate",
+            ],
+            rows,
+        )
+    )
+    lines.append("")
+    lines.append(
+        "The same two columns as a ranking — **still untimed, still the same %s "
+        "labelled queries:**" % truth0.get("queries")
+    )
+    lines.append("")
+    lines.append(
+        "| order | at equal k | under a %s-token budget |" % headline_key
+    )
+    lines.append("|---|---|---|")
+    lines.append(
+        "| ranking | %s | %s |" % (_tier_text(equal_k_tiers), _tier_text(budget_tiers))
+    )
+    lines.append("")
+
+    if inversions:
+        lines.append(
+            "**The ranking changes when the constraint is context rather than "
+            "chunk count.** At equal k the order is %s; under a %s-token budget "
+            "it is %s. The inversion%s: %s."
+            % (
+                _tier_text(equal_k_tiers),
+                headline_key,
+                _tier_text(budget_tiers),
+                "" if len(inversions) == 1 else "s",
+                "; ".join(
+                    "`%s` led `%s` at equal k and trails it under a budget"
+                    % (winner, loser)
+                    for winner, loser in inversions
+                ),
+            )
+        )
+    elif collapses:
+        lines.append(
+            "**No profile overtakes another — but the gap that equal k reports "
+            "is not there once the budget is the constraint.** %s. The ordering "
+            "survives; the separation does not, and the separation is what the "
+            "equal-k table was being read for."
+            % "; ".join(
+                "`%s` leads `%s` by %s at equal k (%s vs %s) and ties it under a "
+                "%s-token budget (%s vs %s)"
+                % (
+                    winner,
+                    loser,
+                    _fmt(_equal_k(winner) - _equal_k(loser), 4),
+                    _fmt(_equal_k(winner), 4),
+                    _fmt(_equal_k(loser), 4),
+                    headline_key,
+                    _fmt(_budget(winner), 4),
+                    _fmt(_budget(loser), 4),
+                )
+                for winner, loser in collapses
+            )
+        )
+        lines.append("")
+        lines.append(
+            "**v1's equal-k comparison is the reason this was invisible.** k is "
+            "a count of chunks, so at k=%s a coarse profile is handed several "
+            "times as much text as a fine one for the same nominal retrieval "
+            "depth, and then credited for covering more documents with it. Hold "
+            "the *context* fixed instead and that advantage is gone: inside %s "
+            "tokens %s"
+            % (
+                harness.get("k"),
+                headline_key,
+                "; ".join(
+                    "`%s` admits %s chunks covering %s of the %s documents"
+                    % (
+                        name,
+                        _fmt(budget_scores[name].get("chunks_admitted"), 1),
+                        _fmt(budget_scores[name].get("unique_docs"), 2),
+                        corpus.get("files"),
+                    )
+                    for name in profile_names
+                ),
+            )
+            + "."
+        )
+    elif separations:
+        lines.append(
+            "**The ranking does not invert, but the budget separates profiles "
+            "that equal k could not tell apart.** %s."
+            % "; ".join(
+                "`%s` and `%s` tie at equal k and `%s` leads under a %s-token "
+                "budget (%s vs %s)"
+                % (
+                    winner,
+                    loser,
+                    winner,
+                    headline_key,
+                    _fmt(_budget(winner), 4),
+                    _fmt(_budget(loser), 4),
+                )
+                for winner, loser in separations
+            )
+        )
+    else:
+        lines.append(
+            "**The ranking does not change, and neither does the separation.** "
+            "Under a %s-token budget the order is %s, which is the equal-k "
+            "order, and every pairwise gap has the same sign. This is stated "
+            "with the same prominence it would have had if it had come out the "
+            "other way: the budget comparison exists because equal k *can* "
+            "mislead across chunk sizes, and on this corpus it did not."
+            % (headline_key, _tier_text(budget_tiers))
+        )
+    lines.append("")
+    saturated = [name for name in profile_names if _budget(name) >= 1.0 - _TIE]
+    if saturated:
+        lines.append(
+            "One caveat on this table, which the numbers make unavoidable: "
+            "`recall@budget` is **saturated at 1.000 on %s** at this budget. A "
+            "metric pinned at its ceiling cannot rank anything above it, so the "
+            "comparison above resolves the bottom of the field and not the top. "
+            "The corpus has %s documents and %s labelled queries; separating "
+            "profiles that all retrieve everything asked of them needs a harder "
+            "labelled set, not a different budget."
+            % (
+                " and ".join("`%s`" % n for n in saturated),
+                corpus.get("files"),
+                truth0.get("queries"),
+            )
+        )
+        lines.append("")
 
     # --- limitations --------------------------------------------------------
     lines.append("## Limitations")
@@ -2107,18 +3914,58 @@ def render_benchmarks(reports: List[dict]) -> str:
         "heading density and different vocabulary overlap, both of which the "
         "chunker is sensitive to.",
         "**Local only, single client, no concurrency.** One process, one "
-        "collection, no parallel readers or writers, no server hop. Nothing "
-        "here says anything about behaviour under load.",
+        "collection, no parallel readers or writers. The MCP round-trip is the "
+        "only figure here that crosses a process boundary, and it is a single "
+        "client talking to a single server. Nothing here says anything about "
+        "behaviour under load.",
         "**One embedder.** %s / %s throughout. The comparison is between chunk "
-        "geometries at a fixed embedder, not between embedders."
+        "geometries at a fixed embedder, not between embedders. Since query "
+        "embedding turns out to be most of the read, that fixed choice is doing "
+        "more work in these numbers than any chunking decision."
         % (
             (ordered[0]["profile"].get("embedder") or {}).get("provider"),
             (ordered[0]["profile"].get("embedder") or {}).get("model"),
         ),
-        "**Cold and warm are both present.** The `cold` column is the first run "
-        "of each operation and is reported separately, but the process itself is "
-        "warm by the time later profiles run; ordering effects at the "
-        "millisecond scale are not controlled for.",
+        "**Cold start is a cold process, not a cold machine.** Each cold-start "
+        "sample is a genuinely fresh subprocess — new interpreter, new import, "
+        "new Chroma client, new ONNX session — but the OS page cache still "
+        "holds the model file from the previous sample, and this harness does "
+        "not purge it. Only the very first sample pays a cold file read. A "
+        "first-boot number would be larger, and nothing here measures it.",
+        "**%d cold-start sample%s per cell.** The cold-start tables report "
+        "median, minimum and maximum and nothing else, because that many "
+        "samples support nothing else. The spread between minimum and maximum "
+        "is the honest statement of what is known about that distribution."
+        % (runs_of("cold_start"), "" if runs_of("cold_start") == 1 else "s"),
+        "**Token counts are approximated from characters.** `ceil(len(text) / "
+        "4)`, not a tokenizer. The budget comparison is internally consistent "
+        "and the ranking it produces is not sensitive to a uniform scaling of "
+        "that estimate, but the absolute token figures should not be read as a "
+        "real model's context accounting.",
+    ] + (
+        [
+            "**A percentile of %d samples is still a percentile of %d samples.** "
+            "%s earn a P95 by the rule this document sets itself, and %d samples "
+            "put roughly %d above it. That is enough to say the tail exists and "
+            "not enough to characterise it."
+            % (
+                runs_of(earns[0]),
+                runs_of(earns[0]),
+                " and ".join("`%s`" % op for op in earns),
+                runs_of(earns[0]),
+                max(1, round(runs_of(earns[0]) * 0.05)),
+            )
+        ]
+        if earns
+        else [
+            "**No percentile is reported anywhere in this run.** Every operation "
+            "was sampled below the N ≥ %d gate, so the latency tables are "
+            "medians and spreads only. A run at the shipped defaults reports "
+            "P50 and P95 for `read` and `delete`; this one does not, and no "
+            "figure below should be read as a tail statistic."
+            % percentile_min_n
+        ]
+    ) + [
         "**No vendor comparison.** Every profile here is the same local stack. "
         "A hosted retrieval service is a different measurement and is not one of "
         "these rows.",
@@ -2268,6 +4115,97 @@ def _environment() -> dict:
     )
 
 
+def cold_start_child(args) -> int:
+    """One operation, in this process, with nothing warm. Prints one JSON line.
+
+    Invoked by ``ProfileBench._cold_start_probe`` as a subprocess. Everything
+    expensive happens here for the first time: the module import above already
+    ran, Chroma has not been imported, the ONNX session does not exist and the
+    OS has not been asked for the model file by this process.
+
+    Two things are true of this child and are worth stating rather than
+    assuming:
+
+    * The offline socket guard is installed at module import, which is above
+      this function. A cold-start probe is exactly the moment a library is most
+      likely to reach for the network — a model download, a telemetry ping —
+      and it is guarded like every other run.
+    * The collection is checked to be in the bench namespace before anything is
+      built. A cold-start measurement pointed at the working collection would
+      violate the corpus guarantee the whole report rests on, and it would do
+      so from a subprocess where it is hardest to see.
+    """
+    kind = args.cold_start_probe
+    name = (args.profile or ["baseline"])[0]
+    collection_name = args.collection or ""
+
+    for label, value in (("--collection", collection_name), ("RAG_COLLECTION", COLLECTION_NAME)):
+        if not value.startswith(COLLECTION_PREFIX):
+            print(
+                "cold-start probe refuses to run: %s is %r, which is outside the "
+                "%r namespace" % (label, value, COLLECTION_PREFIX),
+                file=sys.stderr,
+            )
+            return 2
+    if args.corpus is None:
+        print("cold-start probe needs --corpus DIR", file=sys.stderr)
+        return 2
+
+    profile = load_profile(name)
+    config = config_from_profile(profile)
+    k = args.k or int((profile.get("retrieval") or {}).get("k", 5))
+
+    # --- init: module import through Chroma client and embedder ready -------
+    # One embedding function instance, warmed here and handed to the operation
+    # below, so the ONNX model is loaded exactly once and the load is charged to
+    # init rather than to the operation that happens to touch it first.
+    embedder = _embedding_function()
+    embedder(["cold start probe warm up"])
+    client = get_client()
+    collection = None
+    if kind == "read":
+        collection = client.get_collection(
+            name=collection_name, embedding_function=embedder
+        )
+        collection.count()
+    init_ms = (time.perf_counter() - _PROCESS_START) * 1000.0
+
+    # --- the operation ------------------------------------------------------
+    started = time.perf_counter()
+    if kind == "read":
+        for query in QUERIES:
+            collection.query(query_texts=[query], n_results=k)  # type: ignore[union-attr]
+        detail = {"queries": len(QUERIES), "k": k}
+    else:
+        summary = reindex(
+            reset=True,
+            root=args.corpus,
+            collection_name=collection_name,
+            config=config,
+            embedding_function=embedder,
+        )
+        detail = {"files": summary.get("files"), "chunks": summary.get("chunks")}
+    op_ms = (time.perf_counter() - started) * 1000.0
+
+    sys.stdout.write(
+        COLD_START_SENTINEL
+        + json.dumps(
+            {
+                "operation": kind,
+                "profile": name,
+                "collection": collection_name,
+                "init_ms": round(init_ms, 3),
+                "op_ms": round(op_ms, 3),
+                "blocked_connect_attempts": len(BLOCKED_CONNECTS),
+                "detail": detail,
+            }
+        )
+        + "\n"
+    )
+    sys.stdout.flush()
+    return 0
+
+
 def drop_collection(name: str) -> None:
     if not name.startswith(COLLECTION_PREFIX) or name == COLLECTION_NAME:
         raise RuntimeError("refusing to drop %r" % name)
@@ -2291,8 +4229,51 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         action="store_true",
         help="run the published profiles: %s" % ", ".join(PUBLISHED_PROFILES),
     )
-    parser.add_argument("-n", "--runs", type=int, default=DEFAULT_RUNS, help="runs per op")
+    parser.add_argument(
+        "-n",
+        "--runs",
+        type=int,
+        default=None,
+        help=(
+            "smoke-test escape hatch: set every timed operation to N. Mutually "
+            "exclusive with the per-operation flags below; the published run "
+            "uses the defaults, not this"
+        ),
+    )
+    for op in TIMED_OPS + ("cold_start",):
+        parser.add_argument(
+            "--runs-%s" % op.replace("_", "-"),
+            type=int,
+            default=None,
+            dest="runs_%s" % op,
+            help="samples for the %s operation (default %d, cap %d)"
+            % (op.replace("_", " "), DEFAULT_RUNS[op], RUNS_CAP[op]),
+        )
+    parser.add_argument(
+        "--token-budget",
+        type=int,
+        action="append",
+        default=None,
+        metavar="TOKENS",
+        help="token budget for budget-constrained retrieval; repeatable (default %s)"
+        % ", ".join(str(b) for b in TOKEN_BUDGETS),
+    )
     parser.add_argument("-k", type=int, default=None, help="override retrieval k")
+    parser.add_argument(
+        "--cold-start-probe",
+        choices=("read", "create"),
+        default=None,
+        help=(
+            "child entry point: perform exactly one operation in this process "
+            "and print one JSON line. Used by the cold-start mode; not a "
+            "measurement a caller runs directly"
+        ),
+    )
+    parser.add_argument(
+        "--collection",
+        default=None,
+        help="collection name for --cold-start-probe (must be in the bench namespace)",
+    )
     parser.add_argument("--outdir", type=Path, default=RESULTS_DIR, help="report directory")
     parser.add_argument("--date", default=None, help="date stamp for the filename")
     parser.add_argument(
@@ -2327,6 +4308,50 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser.add_argument("--quiet", action="store_true", help="write files, print nothing")
     args = parser.parse_args(list(argv) if argv is not None else None)
 
+    # --- sample sizes: resolved once, validated hard ------------------------
+    # Exceeding a cap is an error, not a clamp: a silently reduced N would put a
+    # number in the report that the flag says is something else.
+    per_op = {name: getattr(args, "runs_%s" % name) for name in DEFAULT_RUNS}
+    named = sorted(name for name, value in per_op.items() if value is not None)
+    if args.runs is not None and named:
+        parser.error(
+            "-n/--runs sets every timed operation at once and cannot be combined "
+            "with the per-operation flag(s) %s"
+            % ", ".join("--runs-%s" % n.replace("_", "-") for n in named)
+        )
+    runs_per_op = dict(DEFAULT_RUNS)
+    if args.runs is not None:
+        if args.runs < 1:
+            parser.error("--runs must be at least 1")
+        for name in TIMED_OPS:
+            runs_per_op[name] = args.runs
+    for name, value in per_op.items():
+        if value is None:
+            continue
+        if value < 1:
+            parser.error("--runs-%s must be at least 1" % name.replace("_", "-"))
+        if value > RUNS_CAP[name]:
+            parser.error(
+                "--runs-%s is capped at %d (got %d)"
+                % (name.replace("_", "-"), RUNS_CAP[name], value)
+            )
+        runs_per_op[name] = value
+    for name in runs_per_op:
+        if runs_per_op[name] > RUNS_CAP[name]:
+            parser.error(
+                "--runs %d exceeds the cap of %d for %s"
+                % (runs_per_op[name], RUNS_CAP[name], name)
+            )
+
+    budgets = tuple(args.token_budget) if args.token_budget else TOKEN_BUDGETS
+    for budget in budgets:
+        if budget < 1:
+            parser.error("--token-budget must be positive")
+
+    # --- cold-start child: one operation, one JSON line, no state guard -----
+    if args.cold_start_probe is not None:
+        return cold_start_child(args)
+
     # --- corpus emission: a generator run, not a measurement ----------------
     if args.emit_corpus is not None:
         summary = emit_corpus(args.emit_corpus)
@@ -2357,8 +4382,6 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     if args.all and args.profile:
         parser.error("--all and --profile are alternatives, not a combination")
     profile_names = list(PUBLISHED_PROFILES) if args.all else (args.profile or ["baseline"])
-    if args.runs < 1:
-        parser.error("--runs must be at least 1")
     stamp = args.date or _dt.date.today().isoformat()
     outdir = args.outdir
     outdir.mkdir(parents=True, exist_ok=True)
@@ -2411,11 +4434,13 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             bench = ProfileBench(
                 profile=profile,
                 corpus=corpus,
-                runs=args.runs,
+                runs_per_op=runs_per_op,
                 k=args.k or int((profile.get("retrieval") or {}).get("k", 5)),
                 truth=truth,
+                budgets=budgets,
             )
             benched.append(bench.collection_name)
+            benched.append(bench.cold_collection_name)
             # Every profile starts from the same corpus bytes.
             reset_corpus()
             result = bench.run()
@@ -2430,7 +4455,30 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                 "profile": profile,
                 "collection": result["collection"],
                 "harness": {
-                    "runs": args.runs,
+                    # A mapping, not a scalar: the four operations no longer
+                    # share an N, and a table that cannot state its own N must
+                    # not be rendered.
+                    "runs_per_op": dict(runs_per_op),
+                    "percentile_min_n": PERCENTILE_MIN_N,
+                    "statistics": (
+                        "median, min, max and median absolute deviation always; "
+                        "P50 and P95 only at n >= %d; no P99 at any n"
+                        % PERCENTILE_MIN_N
+                    ),
+                    "modes": {
+                        MODE_WARM: (
+                            "many operations in one process: model loaded, OS "
+                            "cache hot. The four timed operations and the stage "
+                            "split are all warm"
+                        ),
+                        MODE_COLD_START: (
+                            "a fresh subprocess per sample, paying interpreter "
+                            "startup, module import, Chroma client construction "
+                            "and ONNX model load before any work"
+                        ),
+                    },
+                    "token_budgets": list(budgets),
+                    "mcp_roundtrip_runs": MCP_ROUNDTRIP_RUNS,
                     "k": bench.k,
                     "queries": list(QUERIES),
                     "corpus": dict(
@@ -2447,9 +4495,17 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                 "chunking_observed": result["chunking_observed"],
                 "indexed_chunks": result["indexed_chunks"],
                 "ops": result["ops"],
+                # Where the read actually goes. The v1 headline rested on this
+                # split without ever measuring it.
+                "read_stages": result["read_stages"],
+                # A fresh process per sample. Not the first row of a warm loop.
+                "cold_start": result["cold_start"],
                 # Timing alone ranks fast-and-wrong above slow-and-right.
                 # Filled by ProfileBench.op_quality(), which is untimed.
                 "quality": result["quality"],
+                # Equal k is not a fair comparison across chunk sizes; this is
+                # the same labelled set scored under a context budget instead.
+                "token_budget": result["token_budget"],
                 # Verdicts only: see StateGuard.public().
                 "state_guard": guard.public(),
             }

@@ -558,16 +558,32 @@ def _embedding_function():
         return embedding_functions.DefaultEmbeddingFunction()
 
 
-def get_collection(create: bool = True, name: Optional[str] = None):
+def get_collection(
+    create: bool = True,
+    name: Optional[str] = None,
+    embedding_function=None,
+):
+    """The collection handle, with the local ONNX embedder attached.
+
+    ``embedding_function`` exists for callers that must *time* the embedder.
+    Each ONNX embedding function instance caches its own model and ONNX session
+    (``cached_property``), so a caller that builds one, loads the model, and then
+    lets this function build a second one pays the model load twice —
+    and the second load lands inside whatever it was trying to measure. Passing
+    the already-warmed instance in makes that cost visible where it was paid.
+    Default ``None`` is the existing behaviour, unchanged.
+    """
     client = get_client()
     name = name or COLLECTION_NAME
+    if embedding_function is None:
+        embedding_function = _embedding_function()
     if create:
         return client.get_or_create_collection(
             name=name,
-            embedding_function=_embedding_function(),
+            embedding_function=embedding_function,
             metadata={"hnsw:space": "cosine"},
         )
-    return client.get_collection(name=name, embedding_function=_embedding_function())
+    return client.get_collection(name=name, embedding_function=embedding_function)
 
 
 def reindex(
@@ -576,6 +592,7 @@ def reindex(
     collection_name: Optional[str] = None,
     config: Optional[ChunkConfig] = None,
     source: Optional[Source] = None,
+    embedding_function=None,
 ) -> dict:
     """Rebuild the collection from the declared source. Returns a summary."""
     source = resolve_source(source, root)
@@ -590,7 +607,7 @@ def reindex(
         except Exception:
             pass  # nothing to drop on a first run
 
-    collection = get_collection(name=name)
+    collection = get_collection(name=name, embedding_function=embedding_function)
     chunks = collect_chunks(config=config, source=source)
     sources = sorted({c.source for c in chunks})
 

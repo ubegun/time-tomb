@@ -23,22 +23,34 @@ by recomputing the manifest and comparing root hashes.
 
 ## Benchmarks
 
-Read latency is effectively flat across a wide span of chunk sizes, so timing
-alone selects the wrong chunk profile; `recall@3` and `nDCG@10` are what pick
-the shipped default. The numbers, the method and the limitations are in
+Read latency is dominated by query embedding rather than by index size, so it
+is effectively flat across a wide span of chunk sizes and timing alone selects
+the wrong chunk profile; `recall@3` and `nDCG@10` are what pick the shipped
+default. The numbers, the method and the limitations are in
 [BENCHMARKS.md](BENCHMARKS.md) — generated from the result files, never typed.
 
 Regenerate all of it from a fresh clone:
 
     ./install.sh && python bench.py --all --corpus bench/corpus
 
-That runs the three chunk profiles at N=10 against `bench/corpus/`, a
-deterministic synthetic corpus committed to this repository together with its
-labelled query set. The corpus on disk is checked byte-for-byte against its
-generator before anything is measured, and `BENCHMARKS.md` is rewritten from
-the result files at the end, so `git diff` shows exactly how your machine
-differs from the published run. No knowledge base is needed: the benchmarks
-bring their own corpus, and a clone without one installs and runs fine.
+That runs the three chunk profiles against `bench/corpus/`, a deterministic
+synthetic corpus committed to this repository together with its labelled query
+set. Each operation has its own sample count — read and delete 100, update 50,
+create 20, cold start 5 — and the statistics are gated on it: a percentile is
+rendered only where the sample count supports one, and no P99 is computed
+anywhere. Latency is reported in two named modes, `warm` (many operations in
+one process) and `cold-start` (a fresh subprocess per sample), and the read is
+broken down into query embedding, vector search, materialization and the full
+MCP round-trip. Retrieval is scored both at equal k and under a fixed token
+budget, because equal k is not a fair comparison across chunk sizes.
+
+The corpus on disk is checked byte-for-byte against its generator before
+anything is measured, and `BENCHMARKS.md` is rewritten from the result files at
+the end, so `git diff` shows exactly how your machine differs from the
+published run. No knowledge base is needed: the benchmarks bring their own
+corpus, and a clone without one installs and runs fine. The full run takes
+several minutes; `-n N` is a smoke-test escape hatch and its output is not a
+publishable run.
 
 ## Layout (published part only)
 

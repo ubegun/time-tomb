@@ -108,9 +108,26 @@ FORBIDDEN_NAMES = {
 # Words that are legitimate vocabulary for a retrieval toolkit even though they
 # may also occur in a note's filename. Anything outside this set that appears in
 # both a knowledge-base filename and a published file is treated as a leak.
+#
+# The bar for adding one is not "it would be convenient": it is that the word is
+# *this repository's own published vocabulary*, so its appearance in a published
+# file cannot be evidence that a note's topic leaked. A reader of the public repo
+# already sees it in a filename. Every word below meets that bar, and every other
+# token taken from a knowledge-base filename stays forbidden.
 GENERIC_TOKENS = {
     "agent",
     "agents",
+    # ``bench`` is the name of a published directory (``bench/corpus``,
+    # ``bench/results``) and of a published file (``bench.py``), and it appears
+    # in the one-line reproduce command this repository promises works. It
+    # cannot be reworded out of the published set, so it cannot function as a
+    # leak signal. A note whose filename contains it is still protected by its
+    # other filename tokens and by the prose probes — two independent checks —
+    # and this is the only word here that was admitted because a knowledge-base
+    # filename started colliding with the toolkit rather than the other way
+    # round. That direction is worth recording: the guard fired correctly, and
+    # what it found was a name collision, not a leak.
+    "bench",
     "generated",  # ordinary English ("generated a new salt"), not a topic
     "index",
     "search",
