@@ -18,6 +18,11 @@ Published artefact:
 the body, so re-running the build on unchanged content is a no-op and the git
 history alone testifies to when revisions happened.
 
+The manifest is scoped to the *published* source. Local-only sources exist
+(see ``index_toolbox``'s source guard) and may be indexed into their own
+collections, but a source declared ``publish: false`` is refused here: the
+published root must move only when the published body moves.
+
 Usage:
     python manifest.py              # build/refresh manifest.json
     python manifest.py --diff       # compare stored manifest against the body
@@ -33,7 +38,6 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 from raglog import (
-    KB_ROOT,
     MANIFEST_FILE,
     MANIFEST_MAP_FILE,
     SALT_FILE,
@@ -88,13 +92,12 @@ def merkle_root(hashes: List[str]) -> str:
     return level[0]
 
 
-def build(root: Optional[Path] = None) -> tuple:
+def build(root: Optional[Path] = None, source=None) -> tuple:
     """Compute (manifest, resolver_map) for the current body."""
     from index_toolbox import collect_chunks
 
-    root = root or KB_ROOT
     salt = load_salt()
-    chunks = collect_chunks(root)
+    chunks = collect_chunks(root=root, source=source)
 
     by_source: Dict[str, list] = {}
     for chunk in chunks:
@@ -170,10 +173,10 @@ def _name_of(key: str, resolver: Dict[str, object]) -> str:
     return "<%s>" % key  # unresolvable without the local map — as intended
 
 
-def diff(root: Optional[Path] = None) -> dict:
+def diff(root: Optional[Path] = None, source=None) -> dict:
     """Compare the stored manifest with a freshly computed one."""
     stored = load_stored()
-    current, _ = build(root)
+    current, _ = build(root, source)
     resolver = load_resolver()
 
     if stored is None:
@@ -212,8 +215,6 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser.add_argument("--root", type=Path, default=None, help="knowledge base root")
     args = parser.parse_args(list(argv) if argv is not None else None)
 
-    root = args.root.resolve() if args.root else KB_ROOT
-
     if args.show:
         stored = load_stored()
         if stored is None:
@@ -230,8 +231,32 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             )
         return 0
 
+    # manifest.json describes the *published* body and nothing else. The active
+    # source decides whether this run may speak for it at all: a source with
+    # publish=false is refused here rather than being allowed to move the
+    # published root, and a disabled source is refused before anything is read.
+    from index_toolbox import SourceError, active_source
+
+    try:
+        source = active_source()
+        if args.root is not None:
+            source = source.narrowed_to(args.root)
+        source.require_enabled()
+    except (RuntimeError, SourceError) as exc:
+        print("source error: %s" % exc)
+        return 2
+
+    if not source.publish:
+        print(
+            "refusing: the active source %r (%s) has publish=false, so it may not "
+            "feed %s. The published manifest stays scoped to the default source; "
+            "index this source into its own collection instead."
+            % (source.id, source.origin, MANIFEST_FILE.name)
+        )
+        return 2
+
     if args.diff:
-        report = diff(root)
+        report = diff(source=source)
         if report["status"] == "missing":
             print("no manifest.json yet (current root %s)" % report["current_root"])
             return 1
@@ -244,7 +269,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                 print("  %-8s %s" % (label, name))
         return 1
 
-    manifest, resolver = build(root)
+    manifest, resolver = build(source=source)
     write(manifest, resolver)
     print(
         "manifest root %s (%d files, %d chunks) -> %s"
