@@ -1,0 +1,66 @@
+{
+  "algo": "sha256(salt||value)[:16]",
+  "chunk_count": 29,
+  "file_count": 4,
+  "root": "8592458eaf272ed7",
+  "tree": [
+    {
+      "hash": "98519040c4522584",
+      "key": "ecb968f20ecb888d",
+      "leaf_count": 14,
+      "leaves": [
+        "2e4c4fb36458950e",
+        "2af5f0eaeecf5aa1",
+        "b628afcf9834ec5a",
+        "e9966febe8b437e0",
+        "4d5177b4c4f2da76",
+        "01ea84171cfcfec4",
+        "8e77a09d5030f5c0",
+        "e3a3c346b77f54ec",
+        "8eaa29f4b7f25b7f",
+        "67b02d1fbf294abd",
+        "6e389d9ccac58952",
+        "5ed9101926461ded",
+        "44689dbfcefc87e9",
+        "c3e87078b18f8d83"
+      ]
+    },
+    {
+      "hash": "50183344366c562f",
+      "key": "ae7b44459fda39fc",
+      "leaf_count": 4,
+      "leaves": [
+        "c2c6e19f7d876ba7",
+        "c0b2debc034de27a",
+        "6e4a3c16fc573973",
+        "804b193da031c94a"
+      ]
+    },
+    {
+      "hash": "dea22796b44ba0f0",
+      "key": "d130d8506f0f71d5",
+      "leaf_count": 7,
+      "leaves": [
+        "828114e4fdc4be63",
+        "54e3549e0d22d7b8",
+        "85ddaa5d2d0e0119",
+        "70bc2fced994c6d9",
+        "731d0898cb282ed4",
+        "dad1a7fd0d952d13",
+        "e980147fd051c09c"
+      ]
+    },
+    {
+      "hash": "437052fb78694ce0",
+      "key": "024d7f961f4195be",
+      "leaf_count": 4,
+      "leaves": [
+        "8b7a540d17d5b2f7",
+        "aa0567e751acd5e1",
+        "b9563776131670f6",
+        "10dacfa0e6f1ee9b"
+      ]
+    }
+  ],
+  "version": 1
+}

@@ -1,0 +1,16 @@
+# The body never enters this repository — only the skeleton.
+.manifest-salt
+manifest-map.json
+.chroma/
+logs/
+.venv/
+*.tbx
+*.log
+
+# Knowledge-base notes: the manifest describes them, the repo never holds them.
+KB/
+notes/
+
+__pycache__/
+*.py[cod]
+.DS_Store
