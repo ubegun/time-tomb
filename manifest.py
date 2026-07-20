@@ -15,18 +15,36 @@ Published artefact:
     manifest.json       root / tree / leaves, a pure function of the content
 
 ``manifest.json`` deliberately carries no timestamp: it is a pure function of
-the body, so re-running the build on unchanged content is a no-op and the git
-history alone testifies to when revisions happened.
+the body **under the default chunk geometry**, so re-running the build on
+unchanged content is a no-op and the git history alone testifies to when
+revisions happened.
 
-The manifest is scoped to the *published* source. Local-only sources exist
-(see ``index_toolbox``'s source guard) and may be indexed into their own
-collections, but a source declared ``publish: false`` is refused here: the
-published root must move only when the published body moves.
+Two conditions must both hold before a run may write the published manifest,
+and each is checked against the configuration itself, never against a profile
+name:
+
+* the active source declares ``publish: true`` — the published root must move
+  only when the published body moves (see ``index_toolbox``'s source guard);
+* the chunk configuration in force equals the shipped default — a different
+  cut of an unchanged body computes a different root, which would move the
+  published root while nothing was published.
+
+A run that fails either check is *refused by design* (exit 3), which is a
+different thing from failing (exit 2). ``--compute`` prints what such a
+configuration would produce without writing anything.
 
 Usage:
     python manifest.py              # build/refresh manifest.json
     python manifest.py --diff       # compare stored manifest against the body
+    python manifest.py --compute    # print this configuration's root; writes nothing
     python manifest.py --show       # print the stored manifest, resolved
+
+Exit codes:
+    0  ok / clean
+    1  dirty or missing — a real answer about the body
+    2  error — bad source, bad profile
+    3  refused by design — this configuration may not speak for the published
+       manifest
 """
 
 import argparse
@@ -49,6 +67,46 @@ log = get_logger("manifest")
 HASH_LEN = 16  # hex chars kept from each sha256
 MANIFEST_VERSION = 1
 EMPTY = hashlib.sha256(b"rag-skeleton/empty").hexdigest()[:HASH_LEN]
+
+# Exit codes. 3 exists so that "this configuration is not allowed to speak for
+# the published manifest" is distinguishable from "something went wrong": a
+# caller can act on the first (compute and report) and must stop on the second.
+EXIT_OK = 0
+EXIT_DIRTY = 1
+EXIT_ERROR = 2
+EXIT_REFUSED = 3
+
+
+class GeometryError(RuntimeError):
+    """Raised when a non-default chunk geometry tries to write the manifest."""
+
+
+def _geometry(config) -> str:
+    """The geometry as a short label. Only the numbers vary in practice: the
+    profile loader refuses any strategy but the implemented one, so a strategy
+    mismatch cannot reach here — the comparison still covers it."""
+    return "max_chars=%d overlap=%d min=%d" % (
+        config.max_chars,
+        config.overlap_chars,
+        config.min_chars,
+    )
+
+
+def geometry_in_force() -> tuple:
+    """``(config, is_default)`` for the chunk configuration this run would use.
+
+    The published manifest describes the body cut the shipped way. Cutting the
+    same bytes differently yields a different root, so a run under a different
+    geometry must not write ``manifest.json`` — however legitimate its source
+    is. The predicate compares the resolved ``ChunkConfig`` against the module
+    default; a profile that merely restates the defaults passes, and one that
+    changes them is refused. Comparing profile *names* here would be a bug: it
+    would bless a name rather than the geometry it happens to carry today.
+    """
+    from index_toolbox import DEFAULT_CONFIG, resolve_config
+
+    config = resolve_config(None)
+    return config, config == DEFAULT_CONFIG
 
 
 def load_salt(create: bool = True) -> bytes:
@@ -138,6 +196,25 @@ def build(root: Optional[Path] = None, source=None) -> tuple:
 
 
 def write(manifest: dict, resolver: dict) -> None:
+    """Persist the manifest — the one place the published root can move.
+
+    ``main()`` gates on the geometry before it gets here; this repeats the
+    check at the mutation point so a library caller cannot move the published
+    root by cutting the body a different way. ``build()`` stays permissive on
+    purpose: computing a root is harmless, writing one is not.
+    """
+    from index_toolbox import DEFAULT_CONFIG
+
+    config, is_default = geometry_in_force()
+    if not is_default:
+        raise GeometryError(
+            "refusing to write %s under chunk geometry [%s]: the published "
+            "manifest describes the default geometry [%s], and a different cut "
+            "of an unchanged body computes a different root. Build it under the "
+            "default geometry, or use --compute to see this one's root."
+            % (MANIFEST_FILE.name, _geometry(config), _geometry(DEFAULT_CONFIG))
+        )
+
     MANIFEST_FILE.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
@@ -211,6 +288,11 @@ def diff(root: Optional[Path] = None, source=None) -> dict:
 def main(argv: Optional[Iterable[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--diff", action="store_true", help="compare stored manifest to body")
+    parser.add_argument(
+        "--compute",
+        action="store_true",
+        help="print this configuration's root and counts; writes nothing",
+    )
     parser.add_argument("--show", action="store_true", help="print stored manifest, resolved")
     parser.add_argument("--root", type=Path, default=None, help="knowledge base root")
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -219,7 +301,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         stored = load_stored()
         if stored is None:
             print("no manifest.json")
-            return 1
+            return EXIT_DIRTY
         resolver = load_resolver()
         print("root:   %s" % stored["root"])
         print("files:  %d" % stored["file_count"])
@@ -229,13 +311,14 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                 "  %s  %-50s %3d leaves"
                 % (node["hash"], _name_of(node["key"], resolver), node["leaf_count"])
             )
-        return 0
+        return EXIT_OK
 
-    # manifest.json describes the *published* body and nothing else. The active
-    # source decides whether this run may speak for it at all: a source with
-    # publish=false is refused here rather than being allowed to move the
-    # published root, and a disabled source is refused before anything is read.
-    from index_toolbox import SourceError, active_source
+    # manifest.json describes the *published* body, cut the shipped way, and
+    # nothing else. Two independent things decide whether this run may speak for
+    # it: the source (a publish=false source must not move the published root,
+    # and a disabled source is refused before anything is read) and the chunk
+    # geometry (a different cut computes a different root from the same bytes).
+    from index_toolbox import DEFAULT_CONFIG, SourceError, active_source
 
     try:
         source = active_source()
@@ -244,30 +327,56 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         source.require_enabled()
     except (RuntimeError, SourceError) as exc:
         print("source error: %s" % exc)
-        return 2
+        return EXIT_ERROR
+
+    try:
+        config, geometry_is_default = geometry_in_force()
+    except RuntimeError as exc:  # a malformed chunking block in the profile
+        print("profile error: %s" % exc)
+        return EXIT_ERROR
+
+    # --compute answers "what would this configuration produce?" and is exempt
+    # from both gates precisely because it cannot mutate anything.
+    if args.compute:
+        computed, _resolver = build(source=source)
+        print(
+            "root %s (%d files, %d chunks) - computed, not written"
+            % (computed["root"], computed["file_count"], computed["chunk_count"])
+        )
+        return EXIT_OK
 
     if not source.publish:
         print(
             "refusing: the active source %r (%s) has publish=false, so it may not "
             "feed %s. The published manifest stays scoped to the default source; "
-            "index this source into its own collection instead."
+            "index this source into its own collection instead. Use --compute for "
+            "this configuration's root."
             % (source.id, source.origin, MANIFEST_FILE.name)
         )
-        return 2
+        return EXIT_REFUSED
+
+    if not geometry_is_default:
+        print(
+            "refusing: chunk geometry [%s] is not the default [%s]. A different "
+            "cut of an unchanged body computes a different root, so this run may "
+            "not speak for %s. Use --compute for this configuration's root."
+            % (_geometry(config), _geometry(DEFAULT_CONFIG), MANIFEST_FILE.name)
+        )
+        return EXIT_REFUSED
 
     if args.diff:
         report = diff(source=source)
         if report["status"] == "missing":
             print("no manifest.json yet (current root %s)" % report["current_root"])
-            return 1
+            return EXIT_DIRTY
         if report["status"] == "clean":
             print("no changes (root %s)" % report["current_root"])
-            return 0
+            return EXIT_OK
         print("CHANGED: stored root %s -> current %s" % (report["stored_root"], report["current_root"]))
         for label in ("added", "removed", "changed"):
             for name in report[label]:
                 print("  %-8s %s" % (label, name))
-        return 1
+        return EXIT_DIRTY
 
     manifest, resolver = build(source=source)
     write(manifest, resolver)
@@ -275,7 +384,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         "manifest root %s (%d files, %d chunks) -> %s"
         % (manifest["root"], manifest["file_count"], manifest["chunk_count"], MANIFEST_FILE.name)
     )
-    return 0
+    return EXIT_OK
 
 
 if __name__ == "__main__":
