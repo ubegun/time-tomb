@@ -1,18 +1,41 @@
 {
   "algo": "sha256(salt||value)[:16]",
-  "chunk_count": 33,
-  "file_count": 5,
-  "root": "09a93dffcafc7ccd",
+  "chunk_count": 42,
+  "file_count": 7,
+  "root": "34eab582296f42d9",
   "tree": [
     {
-      "hash": "888ed1aadddae7a9",
-      "key": "050905c3c3e9ff94",
+      "hash": "f6aa9a0fcf4c719d",
+      "key": "72c9871700c660ec",
       "leaf_count": 4,
+      "leaves": [
+        "034a96f6b413f0d9",
+        "da9bf0a418650ab9",
+        "b3ef6f7f586e8c0b",
+        "44d2f5affe16b762"
+      ]
+    },
+    {
+      "hash": "8d6b7c3da6475e1a",
+      "key": "050905c3c3e9ff94",
+      "leaf_count": 5,
       "leaves": [
         "90c038ce8585a75d",
         "3a559dc5a0a72d52",
         "98fe2102c14e5109",
-        "62b45efece5a4da8"
+        "62b45efece5a4da8",
+        "fd7ccd2783f82db6"
+      ]
+    },
+    {
+      "hash": "955da7c7239cb6ad",
+      "key": "f0ae4e703561836d",
+      "leaf_count": 4,
+      "leaves": [
+        "c130e431ecdaf2a1",
+        "542dff5f20e57ede",
+        "54d1f2329c1a0873",
+        "a56b1ef16e3aaaf5"
       ]
     },
     {
