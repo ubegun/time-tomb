@@ -1,9 +1,20 @@
 {
   "algo": "sha256(salt||value)[:16]",
-  "chunk_count": 29,
-  "file_count": 4,
-  "root": "8592458eaf272ed7",
+  "chunk_count": 33,
+  "file_count": 5,
+  "root": "09a93dffcafc7ccd",
   "tree": [
+    {
+      "hash": "888ed1aadddae7a9",
+      "key": "050905c3c3e9ff94",
+      "leaf_count": 4,
+      "leaves": [
+        "90c038ce8585a75d",
+        "3a559dc5a0a72d52",
+        "98fe2102c14e5109",
+        "62b45efece5a4da8"
+      ]
+    },
     {
       "hash": "98519040c4522584",
       "key": "ecb968f20ecb888d",
