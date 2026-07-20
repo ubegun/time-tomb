@@ -71,6 +71,8 @@ PUBLISH_SPEC: Dict[str, str] = {
 PUBLISH_TREES: Tuple[Tuple[str, str], ...] = (
     ("bench/corpus", "*.md"),
     ("bench/corpus", "ground-truth.json"),
+    ("bench/corpus-quality", "*.md"),
+    ("bench/corpus-quality", "ground-truth.json"),
     ("bench/results", "*.json"),
 )
 
@@ -395,7 +397,9 @@ def _markdown_allowed(relative: Path) -> bool:
     key = relative.as_posix()
     if key in ("README.md", "BENCHMARKS.md"):
         return True
-    return key.startswith("bench/corpus/") and len(relative.parts) == 3
+    return (
+        key.startswith("bench/corpus/") or key.startswith("bench/corpus-quality/")
+    ) and len(relative.parts) == 3
 
 
 def verify() -> List[str]:

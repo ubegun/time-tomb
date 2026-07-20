@@ -1,0 +1,3350 @@
+{
+  "schema_version": 2,
+  "generator": "bench.py:build_corpus",
+  "seed": 20260721,
+  "geometry": {
+    "id": "quality",
+    "notes": 24,
+    "sections_per_note": 8,
+    "seed": 20260721,
+    "vocabulary_words": 80,
+    "mutable_document": null,
+    "planting_slots": 192
+  },
+  "documents": [
+    "note-00.md",
+    "note-01.md",
+    "note-02.md",
+    "note-03.md",
+    "note-04.md",
+    "note-05.md",
+    "note-06.md",
+    "note-07.md",
+    "note-08.md",
+    "note-09.md",
+    "note-10.md",
+    "note-11.md",
+    "note-12.md",
+    "note-13.md",
+    "note-14.md",
+    "note-15.md",
+    "note-16.md",
+    "note-17.md",
+    "note-18.md",
+    "note-19.md",
+    "note-20.md",
+    "note-21.md",
+    "note-22.md",
+    "note-23.md"
+  ],
+  "mutable_document": null,
+  "mutable_document_note": "this corpus has none: no timed operation touches it, so nothing rewrites or removes a document while it is being scored",
+  "labels_origin": "planted at corpus generation; never derived from retriever output",
+  "relevance": "a retrieved chunk is a hit when its source file is in the query's relevant set; labels are never keyed to chunk ids",
+  "k_ladder": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "retrieval_depth": 10,
+  "language": "English only; see multilingual_probe for the coverage probe",
+  "categories": {
+    "multi-doc": 20,
+    "single-hop": 24,
+    "unanswerable": 8,
+    "vague": 12
+  },
+  "phrasings": {
+    "misspelled": 16,
+    "natural": 16,
+    "terse": 16,
+    "verbose": 16
+  },
+  "splits": {
+    "held-out": 48,
+    "tuning": 16
+  },
+  "counts_by_category_and_split": {
+    "multi-doc": {
+      "held-out": 15,
+      "tuning": 5
+    },
+    "single-hop": {
+      "held-out": 18,
+      "tuning": 6
+    },
+    "unanswerable": {
+      "held-out": 6,
+      "tuning": 2
+    },
+    "vague": {
+      "held-out": 9,
+      "tuning": 3
+    }
+  },
+  "split_rule": "queries ordered by category, then by phrasing rotated by the category's own position, then by id; every 4th entry in that order is tuning and the rest are held-out. Deterministic, exactly a quarter of every category and exactly a quarter of every phrasing, and stable across a rebuild - a split that moved would invalidate every comparison against an earlier run",
+  "headline_split": "held-out",
+  "headline_rule": "the profile comparison is computed over split == 'held-out' answerable queries and states its own N; the tuning subset is reported beside it, never instead of it",
+  "relevant_set_contract": {
+    "single-hop": "exactly 1 relevant document",
+    "multi-doc": "2 or 3, and each carries a different part of the answer",
+    "vague": "1 or 2, underspecified phrasing, still answerable",
+    "unanswerable": "0; must score exactly zero on every rung and budget"
+  },
+  "queries": [
+    {
+      "id": "brenmoor-governor",
+      "query": "what pressure does the brenmoor governor hold at cold start",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-00.md"
+      ]
+    },
+    {
+      "id": "brenmoor-manifold",
+      "query": "how often is the brenmoor manifold re-shimmed",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-01.md",
+        "note-02.md"
+      ]
+    },
+    {
+      "id": "brenmoor-damper",
+      "query": "brenmoor damper outlet temperature limit",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-03.md"
+      ]
+    },
+    {
+      "id": "brenmoor-buffer",
+      "query": "anything I should know about the brenmoor buffer",
+      "category": "vague",
+      "split": "tuning",
+      "phrasing": "natural",
+      "relevant": [
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "calvestry-escapement",
+      "query": "calvestry escapement bleed order",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-05.md",
+        "note-06.md",
+        "note-07.md"
+      ]
+    },
+    {
+      "id": "calvestry-diaphragm",
+      "query": "the facing on ours has gone matte around the outer third and I am trying to work out why, what actually causes a calvestry diaphragm to blister in service",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-08.md"
+      ]
+    },
+    {
+      "id": "calvestry-wickstay",
+      "query": "I want to get this right first time rather than have it come back, how is the calvestry wickstay supposed to be tensioned and to what figure",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-09.md",
+        "note-10.md"
+      ]
+    },
+    {
+      "id": "calvestry-rail",
+      "query": "what running clearence does the calvestry rail take",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-11.md"
+      ]
+    },
+    {
+      "id": "dunwidge-gasket",
+      "query": "dunwidge gasket notes",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-12.md",
+        "note-13.md"
+      ]
+    },
+    {
+      "id": "dunwidge-flywheel",
+      "query": "how offen is the dunwidge flywheel re-shimmed",
+      "category": "multi-doc",
+      "split": "tuning",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-14.md",
+        "note-15.md",
+        "note-16.md"
+      ]
+    },
+    {
+      "id": "dunwidge-bushing",
+      "query": "what temperature limit applies to the dunwidge bushing",
+      "category": "single-hop",
+      "split": "tuning",
+      "phrasing": "natural",
+      "relevant": [
+        "note-17.md"
+      ]
+    },
+    {
+      "id": "dunwidge-trunnion",
+      "query": "what tool releases the dunwidge trunnion",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-18.md",
+        "note-19.md"
+      ]
+    },
+    {
+      "id": "eldrache-gudgeon",
+      "query": "eldrache gudgeon bleed order",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-20.md"
+      ]
+    },
+    {
+      "id": "eldrache-ratchet",
+      "query": "someone asked me about the eldrache ratchet the other day and I realised I do not actually know what we have written down about it, what is there",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-21.md"
+      ]
+    },
+    {
+      "id": "eldrache-pawl",
+      "query": "I want to get this right first time rather than have it come back, how is the eldrache pawl supposed to be tensioned and to what figure",
+      "category": "single-hop",
+      "split": "tuning",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-22.md"
+      ]
+    },
+    {
+      "id": "eldrache-cleat",
+      "query": "eldrache cleat running clearance",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-00.md",
+        "note-01.md",
+        "note-23.md"
+      ]
+    },
+    {
+      "id": "fennimore-shackle",
+      "query": "what presure does the fennimore shackle hold at cold start",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-02.md"
+      ]
+    },
+    {
+      "id": "fennimore-turnbuckle",
+      "query": "anythin I should know about the fennimore turnbuckle",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-03.md",
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "fennimore-grommet",
+      "query": "we have been seeing warm readings all week and I want to check the paperwork, what is the outlet temperature the fennimore grommet is not allowed to go above",
+      "category": "multi-doc",
+      "split": "tuning",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-05.md",
+        "note-06.md"
+      ]
+    },
+    {
+      "id": "fennimore-ferrule",
+      "query": "what tool releases the fennimore ferrule",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-07.md"
+      ]
+    },
+    {
+      "id": "gostrelle-collet",
+      "query": "what is the bleeed order for the gostrelle collet",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-08.md",
+        "note-09.md",
+        "note-10.md"
+      ]
+    },
+    {
+      "id": "gostrelle-mandrel",
+      "query": "gostrelle mandrel blistering cause",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-11.md"
+      ]
+    },
+    {
+      "id": "gostrelle-arbor",
+      "query": "anything I should know about the gostrelle arbor",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-12.md"
+      ]
+    },
+    {
+      "id": "gostrelle-tappet",
+      "query": "what running clearance does the gostrelle tappet take",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-13.md",
+        "note-14.md"
+      ]
+    },
+    {
+      "id": "halbrook-rocker",
+      "query": "I am going through the shift start-up sheet and I cannot remember what the cold-start pressure on the halbrook rocker is supposed to be, could someone tell me the figure",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-15.md"
+      ]
+    },
+    {
+      "id": "halbrook-camlock",
+      "query": "halbrook camlock re-shim interval",
+      "category": "multi-doc",
+      "split": "tuning",
+      "phrasing": "terse",
+      "relevant": [
+        "note-16.md",
+        "note-17.md",
+        "note-18.md"
+      ]
+    },
+    {
+      "id": "halbrook-keyway",
+      "query": "what temperture limit applies to the halbrook keyway",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-19.md"
+      ]
+    },
+    {
+      "id": "ivestrand-splinebox",
+      "query": "ivestrand splinebox notes",
+      "category": "vague",
+      "split": "tuning",
+      "phrasing": "terse",
+      "relevant": [
+        "note-20.md",
+        "note-21.md"
+      ]
+    },
+    {
+      "id": "ivestrand-drumhead",
+      "query": "what is the bleed order for the ivestrand drumhead",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-22.md"
+      ]
+    },
+    {
+      "id": "ivestrand-brakeshoe",
+      "query": "the facing on ours has gone matte around the outer third and I am trying to work out why, what actually causes a ivestrand brakeshoe to blister in service",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-00.md",
+        "note-23.md"
+      ]
+    },
+    {
+      "id": "jarrowmede-clevis",
+      "query": "jarrowmede clevis tensioning torque",
+      "category": "single-hop",
+      "split": "tuning",
+      "phrasing": "terse",
+      "relevant": [
+        "note-01.md"
+      ]
+    },
+    {
+      "id": "jarrowmede-yoke",
+      "query": "someone asked me about the jarrowmede yoke the other day and I realised I do not actually know what we have written down about it, what is there",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-02.md"
+      ]
+    },
+    {
+      "id": "jarrowmede-stanchion",
+      "query": "what presure does the jarrowmede stanchion hold at cold start",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-03.md",
+        "note-04.md",
+        "note-05.md"
+      ]
+    },
+    {
+      "id": "kelbourne-bracket",
+      "query": "quick question before I raise the job card, how many cycles are we meant to run before the kelbourne bracket gets re-shimmed again",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-06.md"
+      ]
+    },
+    {
+      "id": "kelbourne-sleeve",
+      "query": "what temperature limit applies to the kelbourne sleeve",
+      "category": "multi-doc",
+      "split": "tuning",
+      "phrasing": "natural",
+      "relevant": [
+        "note-07.md",
+        "note-08.md"
+      ]
+    },
+    {
+      "id": "kelbourne-liner",
+      "query": "what tool realeases the kelbourne liner",
+      "category": "single-hop",
+      "split": "tuning",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-09.md"
+      ]
+    },
+    {
+      "id": "lomasque-hasp",
+      "query": "anythin I should know about the lomasque hasp",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-10.md",
+        "note-11.md"
+      ]
+    },
+    {
+      "id": "lomasque-spigot",
+      "query": "lomasque spigot blistering cause",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-12.md",
+        "note-13.md",
+        "note-14.md"
+      ]
+    },
+    {
+      "id": "lomasque-bonnet",
+      "query": "how is the lomasque bonnet tensioned",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-15.md"
+      ]
+    },
+    {
+      "id": "mardrenne-bung",
+      "query": "we are setting one up from cold and I want to confirm the number before it goes back together, what running clearance should the mardrenne bung be left with",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-16.md",
+        "note-17.md"
+      ]
+    },
+    {
+      "id": "mardrenne-sluice",
+      "query": "mardrenne sluice cold start pressure",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-18.md"
+      ]
+    },
+    {
+      "id": "mardrenne-weir",
+      "query": "anything I should know about the mardrenne weir",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-19.md"
+      ]
+    },
+    {
+      "id": "norvellis-penstock",
+      "query": "we have been seeing warm readings all week and I want to check the paperwork, what is the outlet temperature the norvellis penstock is not allowed to go above",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-20.md"
+      ]
+    },
+    {
+      "id": "norvellis-scupper",
+      "query": "what tool realeases the norvellis scupper",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-21.md",
+        "note-22.md",
+        "note-23.md"
+      ]
+    },
+    {
+      "id": "norvellis-baffle",
+      "query": "what is the bleeed order for the norvellis baffle",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-00.md"
+      ]
+    },
+    {
+      "id": "orthwaine-vane",
+      "query": "orthwaine vane notes",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-01.md",
+        "note-02.md"
+      ]
+    },
+    {
+      "id": "orthwaine-impeller",
+      "query": "how is the orthwaine impeller tensioned",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": [
+        "note-03.md",
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "orthwaine-volute",
+      "query": "what running clearance does the orthwaine volute take",
+      "category": "single-hop",
+      "split": "tuning",
+      "phrasing": "natural",
+      "relevant": [
+        "note-05.md"
+      ]
+    },
+    {
+      "id": "pyrrhault-diffuser",
+      "query": "pyrrhault diffuser cold start pressure",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-06.md",
+        "note-07.md",
+        "note-08.md"
+      ]
+    },
+    {
+      "id": "pyrrhault-nozzle",
+      "query": "pyrrhault nozzle re-shim interval",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": [
+        "note-09.md"
+      ]
+    },
+    {
+      "id": "quennisford-venturi",
+      "query": "someone asked me about the quennisford venturi the other day and I realised I do not actually know what we have written down about it, what is there",
+      "category": "vague",
+      "split": "tuning",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-10.md"
+      ]
+    },
+    {
+      "id": "quennisford-orifice",
+      "query": "I have the quennisford orifice stripped down in front of me and I am not sure which tool is the right one to release it with, what should I be reaching for",
+      "category": "multi-doc",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-11.md",
+        "note-12.md"
+      ]
+    },
+    {
+      "id": "ruskelwaite-throttle",
+      "query": "before I start bleeding this thing, what is the correct order to bleed the ruskelwaite throttle in, I do not want to trap a pocket at the centre port again",
+      "category": "single-hop",
+      "split": "tuning",
+      "phrasing": "verbose",
+      "relevant": [
+        "note-13.md"
+      ]
+    },
+    {
+      "id": "ruskelwaite-regulator",
+      "query": "what casues the ruskelwaite regulator to blister",
+      "category": "multi-doc",
+      "split": "tuning",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-14.md",
+        "note-15.md",
+        "note-16.md"
+      ]
+    },
+    {
+      "id": "tavenmoor-actuator",
+      "query": "how is the tavenmoor actuator tensionned",
+      "category": "single-hop",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-17.md"
+      ]
+    },
+    {
+      "id": "tavenmoor-linkage",
+      "query": "anythin I should know about the tavenmoor linkage",
+      "category": "vague",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": [
+        "note-18.md",
+        "note-19.md"
+      ]
+    },
+    {
+      "id": "halbrook-escutcheon",
+      "query": "what clearance does the halbrook escutcheon take when it is refaced",
+      "category": "unanswerable",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": []
+    },
+    {
+      "id": "ivestrand-quillon",
+      "query": "ivestrand quillon refacing clearance",
+      "category": "unanswerable",
+      "split": "held-out",
+      "phrasing": "terse",
+      "relevant": []
+    },
+    {
+      "id": "jarrowmede-mullion",
+      "query": "I have been asked to reface one of these and I cannot find the figure written down anywhere, what clearance is a jarrowmede mullion supposed to end up with",
+      "category": "unanswerable",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": []
+    },
+    {
+      "id": "kelbourne-barbican",
+      "query": "what clearence does the kelbourne barbican take when it is refaced",
+      "category": "unanswerable",
+      "split": "held-out",
+      "phrasing": "misspelled",
+      "relevant": []
+    },
+    {
+      "id": "pyrrhault-trefoil",
+      "query": "what clearance does the pyrrhault trefoil take when it is refaced",
+      "category": "unanswerable",
+      "split": "held-out",
+      "phrasing": "natural",
+      "relevant": []
+    },
+    {
+      "id": "quennisford-corbel",
+      "query": "quennisford corbel refacing clearance",
+      "category": "unanswerable",
+      "split": "tuning",
+      "phrasing": "terse",
+      "relevant": []
+    },
+    {
+      "id": "ruskelwaite-finial",
+      "query": "I have been asked to reface one of these and I cannot find the figure written down anywhere, what clearance is a ruskelwaite finial supposed to end up with",
+      "category": "unanswerable",
+      "split": "held-out",
+      "phrasing": "verbose",
+      "relevant": []
+    },
+    {
+      "id": "tavenmoor-voussoir",
+      "query": "what clearence does the tavenmoor voussoir take when it is refaced",
+      "category": "unanswerable",
+      "split": "tuning",
+      "phrasing": "misspelled",
+      "relevant": []
+    }
+  ],
+  "topics": [
+    {
+      "id": "brenmoor-governor",
+      "family": "brenmoor",
+      "device": "governor",
+      "aspect": "pressure",
+      "category": "single-hop",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "what pressure does the brenmoor governor hold at cold start",
+      "facts": [
+        "The brenmoor governor holds a cold-start pressure of 47 kilopascal. A crew reads the brenmoor governor before the first pass of a shift, because a governor that has drifted more than four kilopascal below that figure will not seat."
+      ],
+      "notes": [
+        "note-00.md"
+      ]
+    },
+    {
+      "id": "brenmoor-manifold",
+      "family": "brenmoor",
+      "device": "manifold",
+      "aspect": "interval",
+      "category": "multi-doc",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "how often is the brenmoor manifold re-shimmed",
+      "facts": [
+        "The brenmoor manifold is re-shimmed every nine hundred cycles. Shimming a brenmoor manifold early wastes a wear allowance that is measured over the whole service interval and not over a single week.",
+        "Counting the nine hundred cycles for a brenmoor manifold starts at the last full strip-down, never at the last inspection. A count restarted at an inspection quietly shortens the interval and hides the wear it was meant to reveal."
+      ],
+      "notes": [
+        "note-01.md",
+        "note-02.md"
+      ]
+    },
+    {
+      "id": "brenmoor-damper",
+      "family": "brenmoor",
+      "device": "damper",
+      "aspect": "temperature",
+      "category": "single-hop",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "brenmoor damper outlet temperature limit",
+      "facts": [
+        "The brenmoor damper must stay under sixty-two degrees at the outlet. Above that the brenmoor damper begins to shed its facing, and the loss is not recovered by cooling it back down afterwards."
+      ],
+      "notes": [
+        "note-03.md"
+      ]
+    },
+    {
+      "id": "brenmoor-buffer",
+      "family": "brenmoor",
+      "device": "buffer",
+      "aspect": "tool",
+      "category": "vague",
+      "phrasing": "natural",
+      "split": "tuning",
+      "query": "anything I should know about the brenmoor buffer",
+      "facts": [
+        "The brenmoor buffer is released with a quarter-inch offset key. Prying a brenmoor buffer with a screwdriver deforms the latch seat, which is the one part of the assembly with no spare."
+      ],
+      "notes": [
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "calvestry-escapement",
+      "family": "calvestry",
+      "device": "escapement",
+      "aspect": "order",
+      "category": "multi-doc",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "calvestry escapement bleed order",
+      "facts": [
+        "The calvestry escapement is bled outboard first, then centre, then inboard. Bleeding a calvestry escapement in the reverse order traps a pocket at the centre port that no amount of further bleeding clears.",
+        "The outboard-first order for a calvestry escapement holds for a cold line. On a warm line the centre port is taken first, and the escapement is then bled outboard and inboard in the usual way.",
+        "A calvestry escapement fed from a shared header is bled with the header isolated; leaving it open lets the outboard port draw back while the inboard port is still being worked."
+      ],
+      "notes": [
+        "note-05.md",
+        "note-06.md",
+        "note-07.md"
+      ]
+    },
+    {
+      "id": "calvestry-diaphragm",
+      "family": "calvestry",
+      "device": "diaphragm",
+      "aspect": "cause",
+      "category": "single-hop",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "the facing on ours has gone matte around the outer third and I am trying to work out why, what actually causes a calvestry diaphragm to blister in service",
+      "facts": [
+        "The calvestry diaphragm blisters when it is seated dry. A calvestry diaphragm bedded with the specified film will not blister even after several hundred reversals at full stroke."
+      ],
+      "notes": [
+        "note-08.md"
+      ]
+    },
+    {
+      "id": "calvestry-wickstay",
+      "family": "calvestry",
+      "device": "wickstay",
+      "aspect": "torque",
+      "category": "multi-doc",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "I want to get this right first time rather than have it come back, how is the calvestry wickstay supposed to be tensioned and to what figure",
+      "facts": [
+        "The calvestry wickstay is tensioned to eleven newton metres, in two passes. A calvestry wickstay taken to full torque in one pass reads correct on the wrench and is still slack across the far side.",
+        "The two passes on a calvestry wickstay are taken at half figure and full figure, working across the diagonal; a wickstay tensioned around the circle reaches eleven newton metres at every point and still pulls oval."
+      ],
+      "notes": [
+        "note-09.md",
+        "note-10.md"
+      ]
+    },
+    {
+      "id": "calvestry-rail",
+      "family": "calvestry",
+      "device": "rail",
+      "aspect": "clearance",
+      "category": "single-hop",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "what running clearence does the calvestry rail take",
+      "facts": [
+        "The calvestry rail takes a running clearance of nought point four millimetres. A calvestry rail closed up tighter than that picks up on the first warm cycle and cannot be freed again without a strip-down."
+      ],
+      "notes": [
+        "note-11.md"
+      ]
+    },
+    {
+      "id": "dunwidge-gasket",
+      "family": "dunwidge",
+      "device": "gasket",
+      "aspect": "pressure",
+      "category": "vague",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "dunwidge gasket notes",
+      "facts": [
+        "The dunwidge gasket holds a cold-start pressure of 52 kilopascal. A crew reads the dunwidge gasket before the first pass of a shift, because a gasket that has drifted more than four kilopascal below that figure will not seat.",
+        "Setting the cold-start pressure on a dunwidge gasket is a two-stage job: bring it to 52 kilopascal against a cold line, let it stand a quarter of an hour, then bring it back. A dunwidge gasket set in one stage reads correct and falls away before the shift is out."
+      ],
+      "notes": [
+        "note-12.md",
+        "note-13.md"
+      ]
+    },
+    {
+      "id": "dunwidge-flywheel",
+      "family": "dunwidge",
+      "device": "flywheel",
+      "aspect": "interval",
+      "category": "multi-doc",
+      "phrasing": "misspelled",
+      "split": "tuning",
+      "query": "how offen is the dunwidge flywheel re-shimmed",
+      "facts": [
+        "The dunwidge flywheel is re-shimmed every twelve hundred cycles. Shimming a dunwidge flywheel early wastes a wear allowance that is measured over the whole service interval and not over a single week.",
+        "Counting the twelve hundred cycles for a dunwidge flywheel starts at the last full strip-down, never at the last inspection. A count restarted at an inspection quietly shortens the interval and hides the wear it was meant to reveal.",
+        "A dunwidge flywheel that has been re-shimmed twice inside one interval is retired rather than shimmed a third time, whatever the twelve hundred-cycle figure allows."
+      ],
+      "notes": [
+        "note-14.md",
+        "note-15.md",
+        "note-16.md"
+      ]
+    },
+    {
+      "id": "dunwidge-bushing",
+      "family": "dunwidge",
+      "device": "bushing",
+      "aspect": "temperature",
+      "category": "single-hop",
+      "phrasing": "natural",
+      "split": "tuning",
+      "query": "what temperature limit applies to the dunwidge bushing",
+      "facts": [
+        "The dunwidge bushing must stay under fifty-five degrees at the outlet. Above that the dunwidge bushing begins to shed its facing, and the loss is not recovered by cooling it back down afterwards."
+      ],
+      "notes": [
+        "note-17.md"
+      ]
+    },
+    {
+      "id": "dunwidge-trunnion",
+      "family": "dunwidge",
+      "device": "trunnion",
+      "aspect": "tool",
+      "category": "multi-doc",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "what tool releases the dunwidge trunnion",
+      "facts": [
+        "The dunwidge trunnion is released with a half-inch offset key. Prying a dunwidge trunnion with a screwdriver deforms the latch seat, which is the one part of the assembly with no spare.",
+        "The half-inch offset key is turned against the stop and never past it; a dunwidge trunnion released past the stop re-latches out of register and has to be stripped before it can be reset."
+      ],
+      "notes": [
+        "note-18.md",
+        "note-19.md"
+      ]
+    },
+    {
+      "id": "eldrache-gudgeon",
+      "family": "eldrache",
+      "device": "gudgeon",
+      "aspect": "order",
+      "category": "single-hop",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "eldrache gudgeon bleed order",
+      "facts": [
+        "The eldrache gudgeon is bled upper first, then centre, then inboard. Bleeding a eldrache gudgeon in the reverse order traps a pocket at the centre port that no amount of further bleeding clears."
+      ],
+      "notes": [
+        "note-20.md"
+      ]
+    },
+    {
+      "id": "eldrache-ratchet",
+      "family": "eldrache",
+      "device": "ratchet",
+      "aspect": "cause",
+      "category": "vague",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "someone asked me about the eldrache ratchet the other day and I realised I do not actually know what we have written down about it, what is there",
+      "facts": [
+        "The eldrache ratchet blisters when it is seated cold. A eldrache ratchet bedded with the specified film will not blister even after several hundred reversals at full stroke."
+      ],
+      "notes": [
+        "note-21.md"
+      ]
+    },
+    {
+      "id": "eldrache-pawl",
+      "family": "eldrache",
+      "device": "pawl",
+      "aspect": "torque",
+      "category": "single-hop",
+      "phrasing": "verbose",
+      "split": "tuning",
+      "query": "I want to get this right first time rather than have it come back, how is the eldrache pawl supposed to be tensioned and to what figure",
+      "facts": [
+        "The eldrache pawl is tensioned to nineteen newton metres, in two passes. A eldrache pawl taken to full torque in one pass reads correct on the wrench and is still slack across the far side."
+      ],
+      "notes": [
+        "note-22.md"
+      ]
+    },
+    {
+      "id": "eldrache-cleat",
+      "family": "eldrache",
+      "device": "cleat",
+      "aspect": "clearance",
+      "category": "multi-doc",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "eldrache cleat running clearance",
+      "facts": [
+        "The eldrache cleat takes a running clearance of nought point six millimetres. A eldrache cleat closed up tighter than that picks up on the first warm cycle and cannot be freed again without a strip-down.",
+        "Running clearance on a eldrache cleat is measured cold with the shaft at rest; measured turning, a cleat reads under the nought point six millimetre figure and gets closed up further by mistake.",
+        "A eldrache cleat running in a dusty bay is set two tenths over the nought point six millimetre figure, and the wider setting is written on the card so the next fitter does not correct it back."
+      ],
+      "notes": [
+        "note-00.md",
+        "note-01.md",
+        "note-23.md"
+      ]
+    },
+    {
+      "id": "fennimore-shackle",
+      "family": "fennimore",
+      "device": "shackle",
+      "aspect": "pressure",
+      "category": "single-hop",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "what presure does the fennimore shackle hold at cold start",
+      "facts": [
+        "The fennimore shackle holds a cold-start pressure of 61 kilopascal. A crew reads the fennimore shackle before the first pass of a shift, because a shackle that has drifted more than four kilopascal below that figure will not seat."
+      ],
+      "notes": [
+        "note-02.md"
+      ]
+    },
+    {
+      "id": "fennimore-turnbuckle",
+      "family": "fennimore",
+      "device": "turnbuckle",
+      "aspect": "interval",
+      "category": "vague",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "anythin I should know about the fennimore turnbuckle",
+      "facts": [
+        "The fennimore turnbuckle is re-shimmed every four hundred cycles. Shimming a fennimore turnbuckle early wastes a wear allowance that is measured over the whole service interval and not over a single week.",
+        "Counting the four hundred cycles for a fennimore turnbuckle starts at the last full strip-down, never at the last inspection. A count restarted at an inspection quietly shortens the interval and hides the wear it was meant to reveal."
+      ],
+      "notes": [
+        "note-03.md",
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "fennimore-grommet",
+      "family": "fennimore",
+      "device": "grommet",
+      "aspect": "temperature",
+      "category": "multi-doc",
+      "phrasing": "verbose",
+      "split": "tuning",
+      "query": "we have been seeing warm readings all week and I want to check the paperwork, what is the outlet temperature the fennimore grommet is not allowed to go above",
+      "facts": [
+        "The fennimore grommet must stay under seventy-one degrees at the outlet. Above that the fennimore grommet begins to shed its facing, and the loss is not recovered by cooling it back down afterwards.",
+        "Outlet temperature on a fennimore grommet is read at the far flange and not at the body: the body runs several degrees cooler, so a reading taken there will pass a grommet that is already over seventy-one."
+      ],
+      "notes": [
+        "note-05.md",
+        "note-06.md"
+      ]
+    },
+    {
+      "id": "fennimore-ferrule",
+      "family": "fennimore",
+      "device": "ferrule",
+      "aspect": "tool",
+      "category": "single-hop",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "what tool releases the fennimore ferrule",
+      "facts": [
+        "The fennimore ferrule is released with a three-eighths offset key. Prying a fennimore ferrule with a screwdriver deforms the latch seat, which is the one part of the assembly with no spare."
+      ],
+      "notes": [
+        "note-07.md"
+      ]
+    },
+    {
+      "id": "gostrelle-collet",
+      "family": "gostrelle",
+      "device": "collet",
+      "aspect": "order",
+      "category": "multi-doc",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "what is the bleeed order for the gostrelle collet",
+      "facts": [
+        "The gostrelle collet is bled lower first, then centre, then inboard. Bleeding a gostrelle collet in the reverse order traps a pocket at the centre port that no amount of further bleeding clears.",
+        "The lower-first order for a gostrelle collet holds for a cold line. On a warm line the centre port is taken first, and the collet is then bled lower and inboard in the usual way.",
+        "A gostrelle collet fed from a shared header is bled with the header isolated; leaving it open lets the lower port draw back while the inboard port is still being worked."
+      ],
+      "notes": [
+        "note-08.md",
+        "note-09.md",
+        "note-10.md"
+      ]
+    },
+    {
+      "id": "gostrelle-mandrel",
+      "family": "gostrelle",
+      "device": "mandrel",
+      "aspect": "cause",
+      "category": "single-hop",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "gostrelle mandrel blistering cause",
+      "facts": [
+        "The gostrelle mandrel blisters when it is seated over-filmed. A gostrelle mandrel bedded with the specified film will not blister even after several hundred reversals at full stroke."
+      ],
+      "notes": [
+        "note-11.md"
+      ]
+    },
+    {
+      "id": "gostrelle-arbor",
+      "family": "gostrelle",
+      "device": "arbor",
+      "aspect": "torque",
+      "category": "vague",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "anything I should know about the gostrelle arbor",
+      "facts": [
+        "The gostrelle arbor is tensioned to twenty-four newton metres, in two passes. A gostrelle arbor taken to full torque in one pass reads correct on the wrench and is still slack across the far side."
+      ],
+      "notes": [
+        "note-12.md"
+      ]
+    },
+    {
+      "id": "gostrelle-tappet",
+      "family": "gostrelle",
+      "device": "tappet",
+      "aspect": "clearance",
+      "category": "multi-doc",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "what running clearance does the gostrelle tappet take",
+      "facts": [
+        "The gostrelle tappet takes a running clearance of one point two millimetres. A gostrelle tappet closed up tighter than that picks up on the first warm cycle and cannot be freed again without a strip-down.",
+        "Running clearance on a gostrelle tappet is measured cold with the shaft at rest; measured turning, a tappet reads under the one point two millimetre figure and gets closed up further by mistake."
+      ],
+      "notes": [
+        "note-13.md",
+        "note-14.md"
+      ]
+    },
+    {
+      "id": "halbrook-rocker",
+      "family": "halbrook",
+      "device": "rocker",
+      "aspect": "pressure",
+      "category": "single-hop",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "I am going through the shift start-up sheet and I cannot remember what the cold-start pressure on the halbrook rocker is supposed to be, could someone tell me the figure",
+      "facts": [
+        "The halbrook rocker holds a cold-start pressure of 38 kilopascal. A crew reads the halbrook rocker before the first pass of a shift, because a rocker that has drifted more than four kilopascal below that figure will not seat."
+      ],
+      "notes": [
+        "note-15.md"
+      ]
+    },
+    {
+      "id": "halbrook-camlock",
+      "family": "halbrook",
+      "device": "camlock",
+      "aspect": "interval",
+      "category": "multi-doc",
+      "phrasing": "terse",
+      "split": "tuning",
+      "query": "halbrook camlock re-shim interval",
+      "facts": [
+        "The halbrook camlock is re-shimmed every two thousand cycles. Shimming a halbrook camlock early wastes a wear allowance that is measured over the whole service interval and not over a single week.",
+        "Counting the two thousand cycles for a halbrook camlock starts at the last full strip-down, never at the last inspection. A count restarted at an inspection quietly shortens the interval and hides the wear it was meant to reveal.",
+        "A halbrook camlock that has been re-shimmed twice inside one interval is retired rather than shimmed a third time, whatever the two thousand-cycle figure allows."
+      ],
+      "notes": [
+        "note-16.md",
+        "note-17.md",
+        "note-18.md"
+      ]
+    },
+    {
+      "id": "halbrook-keyway",
+      "family": "halbrook",
+      "device": "keyway",
+      "aspect": "temperature",
+      "category": "single-hop",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "what temperture limit applies to the halbrook keyway",
+      "facts": [
+        "The halbrook keyway must stay under forty-eight degrees at the outlet. Above that the halbrook keyway begins to shed its facing, and the loss is not recovered by cooling it back down afterwards."
+      ],
+      "notes": [
+        "note-19.md"
+      ]
+    },
+    {
+      "id": "ivestrand-splinebox",
+      "family": "ivestrand",
+      "device": "splinebox",
+      "aspect": "tool",
+      "category": "vague",
+      "phrasing": "terse",
+      "split": "tuning",
+      "query": "ivestrand splinebox notes",
+      "facts": [
+        "The ivestrand splinebox is released with a six-millimetre offset key. Prying a ivestrand splinebox with a screwdriver deforms the latch seat, which is the one part of the assembly with no spare.",
+        "The six-millimetre offset key is turned against the stop and never past it; a ivestrand splinebox released past the stop re-latches out of register and has to be stripped before it can be reset."
+      ],
+      "notes": [
+        "note-20.md",
+        "note-21.md"
+      ]
+    },
+    {
+      "id": "ivestrand-drumhead",
+      "family": "ivestrand",
+      "device": "drumhead",
+      "aspect": "order",
+      "category": "single-hop",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "what is the bleed order for the ivestrand drumhead",
+      "facts": [
+        "The ivestrand drumhead is bled port first, then centre, then inboard. Bleeding a ivestrand drumhead in the reverse order traps a pocket at the centre port that no amount of further bleeding clears."
+      ],
+      "notes": [
+        "note-22.md"
+      ]
+    },
+    {
+      "id": "ivestrand-brakeshoe",
+      "family": "ivestrand",
+      "device": "brakeshoe",
+      "aspect": "cause",
+      "category": "multi-doc",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "the facing on ours has gone matte around the outer third and I am trying to work out why, what actually causes a ivestrand brakeshoe to blister in service",
+      "facts": [
+        "The ivestrand brakeshoe blisters when it is seated unbedded. A ivestrand brakeshoe bedded with the specified film will not blister even after several hundred reversals at full stroke.",
+        "Blistering on a ivestrand brakeshoe shows first as a matte ring at the outer third. Caught there, a brakeshoe seated unbedded can be re-bedded; past that the facing is scrap."
+      ],
+      "notes": [
+        "note-00.md",
+        "note-23.md"
+      ]
+    },
+    {
+      "id": "jarrowmede-clevis",
+      "family": "jarrowmede",
+      "device": "clevis",
+      "aspect": "torque",
+      "category": "single-hop",
+      "phrasing": "terse",
+      "split": "tuning",
+      "query": "jarrowmede clevis tensioning torque",
+      "facts": [
+        "The jarrowmede clevis is tensioned to seven newton metres, in two passes. A jarrowmede clevis taken to full torque in one pass reads correct on the wrench and is still slack across the far side."
+      ],
+      "notes": [
+        "note-01.md"
+      ]
+    },
+    {
+      "id": "jarrowmede-yoke",
+      "family": "jarrowmede",
+      "device": "yoke",
+      "aspect": "clearance",
+      "category": "vague",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "someone asked me about the jarrowmede yoke the other day and I realised I do not actually know what we have written down about it, what is there",
+      "facts": [
+        "The jarrowmede yoke takes a running clearance of nought point nine millimetres. A jarrowmede yoke closed up tighter than that picks up on the first warm cycle and cannot be freed again without a strip-down."
+      ],
+      "notes": [
+        "note-02.md"
+      ]
+    },
+    {
+      "id": "jarrowmede-stanchion",
+      "family": "jarrowmede",
+      "device": "stanchion",
+      "aspect": "pressure",
+      "category": "multi-doc",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "what presure does the jarrowmede stanchion hold at cold start",
+      "facts": [
+        "The jarrowmede stanchion holds a cold-start pressure of 74 kilopascal. A crew reads the jarrowmede stanchion before the first pass of a shift, because a stanchion that has drifted more than four kilopascal below that figure will not seat.",
+        "Setting the cold-start pressure on a jarrowmede stanchion is a two-stage job: bring it to 74 kilopascal against a cold line, let it stand a quarter of an hour, then bring it back. A jarrowmede stanchion set in one stage reads correct and falls away before the shift is out.",
+        "One exception is written up for the jarrowmede stanchion: on a line drained and refilled the same day the 74 kilopascal figure is read as an upper bound rather than a target, and the stanchion is left a little under it."
+      ],
+      "notes": [
+        "note-03.md",
+        "note-04.md",
+        "note-05.md"
+      ]
+    },
+    {
+      "id": "kelbourne-bracket",
+      "family": "kelbourne",
+      "device": "bracket",
+      "aspect": "interval",
+      "category": "single-hop",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "quick question before I raise the job card, how many cycles are we meant to run before the kelbourne bracket gets re-shimmed again",
+      "facts": [
+        "The kelbourne bracket is re-shimmed every six hundred cycles. Shimming a kelbourne bracket early wastes a wear allowance that is measured over the whole service interval and not over a single week."
+      ],
+      "notes": [
+        "note-06.md"
+      ]
+    },
+    {
+      "id": "kelbourne-sleeve",
+      "family": "kelbourne",
+      "device": "sleeve",
+      "aspect": "temperature",
+      "category": "multi-doc",
+      "phrasing": "natural",
+      "split": "tuning",
+      "query": "what temperature limit applies to the kelbourne sleeve",
+      "facts": [
+        "The kelbourne sleeve must stay under sixty-six degrees at the outlet. Above that the kelbourne sleeve begins to shed its facing, and the loss is not recovered by cooling it back down afterwards.",
+        "Outlet temperature on a kelbourne sleeve is read at the far flange and not at the body: the body runs several degrees cooler, so a reading taken there will pass a sleeve that is already over sixty-six."
+      ],
+      "notes": [
+        "note-07.md",
+        "note-08.md"
+      ]
+    },
+    {
+      "id": "kelbourne-liner",
+      "family": "kelbourne",
+      "device": "liner",
+      "aspect": "tool",
+      "category": "single-hop",
+      "phrasing": "misspelled",
+      "split": "tuning",
+      "query": "what tool realeases the kelbourne liner",
+      "facts": [
+        "The kelbourne liner is released with a ten-millimetre offset key. Prying a kelbourne liner with a screwdriver deforms the latch seat, which is the one part of the assembly with no spare."
+      ],
+      "notes": [
+        "note-09.md"
+      ]
+    },
+    {
+      "id": "lomasque-hasp",
+      "family": "lomasque",
+      "device": "hasp",
+      "aspect": "order",
+      "category": "vague",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "anythin I should know about the lomasque hasp",
+      "facts": [
+        "The lomasque hasp is bled starboard first, then centre, then inboard. Bleeding a lomasque hasp in the reverse order traps a pocket at the centre port that no amount of further bleeding clears.",
+        "The starboard-first order for a lomasque hasp holds for a cold line. On a warm line the centre port is taken first, and the hasp is then bled starboard and inboard in the usual way."
+      ],
+      "notes": [
+        "note-10.md",
+        "note-11.md"
+      ]
+    },
+    {
+      "id": "lomasque-spigot",
+      "family": "lomasque",
+      "device": "spigot",
+      "aspect": "cause",
+      "category": "multi-doc",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "lomasque spigot blistering cause",
+      "facts": [
+        "The lomasque spigot blisters when it is seated proud. A lomasque spigot bedded with the specified film will not blister even after several hundred reversals at full stroke.",
+        "Blistering on a lomasque spigot shows first as a matte ring at the outer third. Caught there, a spigot seated proud can be re-bedded; past that the facing is scrap.",
+        "A lomasque spigot that has blistered once is not returned to the same station, because whatever seated it proud is a property of the station and not of the part."
+      ],
+      "notes": [
+        "note-12.md",
+        "note-13.md",
+        "note-14.md"
+      ]
+    },
+    {
+      "id": "lomasque-bonnet",
+      "family": "lomasque",
+      "device": "bonnet",
+      "aspect": "torque",
+      "category": "single-hop",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "how is the lomasque bonnet tensioned",
+      "facts": [
+        "The lomasque bonnet is tensioned to thirty-two newton metres, in two passes. A lomasque bonnet taken to full torque in one pass reads correct on the wrench and is still slack across the far side."
+      ],
+      "notes": [
+        "note-15.md"
+      ]
+    },
+    {
+      "id": "mardrenne-bung",
+      "family": "mardrenne",
+      "device": "bung",
+      "aspect": "clearance",
+      "category": "multi-doc",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "we are setting one up from cold and I want to confirm the number before it goes back together, what running clearance should the mardrenne bung be left with",
+      "facts": [
+        "The mardrenne bung takes a running clearance of two point one millimetres. A mardrenne bung closed up tighter than that picks up on the first warm cycle and cannot be freed again without a strip-down.",
+        "Running clearance on a mardrenne bung is measured cold with the shaft at rest; measured turning, a bung reads under the two point one millimetre figure and gets closed up further by mistake."
+      ],
+      "notes": [
+        "note-16.md",
+        "note-17.md"
+      ]
+    },
+    {
+      "id": "mardrenne-sluice",
+      "family": "mardrenne",
+      "device": "sluice",
+      "aspect": "pressure",
+      "category": "single-hop",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "mardrenne sluice cold start pressure",
+      "facts": [
+        "The mardrenne sluice holds a cold-start pressure of 43 kilopascal. A crew reads the mardrenne sluice before the first pass of a shift, because a sluice that has drifted more than four kilopascal below that figure will not seat."
+      ],
+      "notes": [
+        "note-18.md"
+      ]
+    },
+    {
+      "id": "mardrenne-weir",
+      "family": "mardrenne",
+      "device": "weir",
+      "aspect": "interval",
+      "category": "vague",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "anything I should know about the mardrenne weir",
+      "facts": [
+        "The mardrenne weir is re-shimmed every fifteen hundred cycles. Shimming a mardrenne weir early wastes a wear allowance that is measured over the whole service interval and not over a single week."
+      ],
+      "notes": [
+        "note-19.md"
+      ]
+    },
+    {
+      "id": "norvellis-penstock",
+      "family": "norvellis",
+      "device": "penstock",
+      "aspect": "temperature",
+      "category": "single-hop",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "we have been seeing warm readings all week and I want to check the paperwork, what is the outlet temperature the norvellis penstock is not allowed to go above",
+      "facts": [
+        "The norvellis penstock must stay under fifty-nine degrees at the outlet. Above that the norvellis penstock begins to shed its facing, and the loss is not recovered by cooling it back down afterwards."
+      ],
+      "notes": [
+        "note-20.md"
+      ]
+    },
+    {
+      "id": "norvellis-scupper",
+      "family": "norvellis",
+      "device": "scupper",
+      "aspect": "tool",
+      "category": "multi-doc",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "what tool realeases the norvellis scupper",
+      "facts": [
+        "The norvellis scupper is released with a eighth-inch offset key. Prying a norvellis scupper with a screwdriver deforms the latch seat, which is the one part of the assembly with no spare.",
+        "The eighth-inch offset key is turned against the stop and never past it; a norvellis scupper released past the stop re-latches out of register and has to be stripped before it can be reset.",
+        "Where no eighth-inch key is to hand, a norvellis scupper may be released by backing off its retaining collar instead. It is slower, and it is the only sanctioned substitute."
+      ],
+      "notes": [
+        "note-21.md",
+        "note-22.md",
+        "note-23.md"
+      ]
+    },
+    {
+      "id": "norvellis-baffle",
+      "family": "norvellis",
+      "device": "baffle",
+      "aspect": "order",
+      "category": "single-hop",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "what is the bleeed order for the norvellis baffle",
+      "facts": [
+        "The norvellis baffle is bled forward first, then centre, then inboard. Bleeding a norvellis baffle in the reverse order traps a pocket at the centre port that no amount of further bleeding clears."
+      ],
+      "notes": [
+        "note-00.md"
+      ]
+    },
+    {
+      "id": "orthwaine-vane",
+      "family": "orthwaine",
+      "device": "vane",
+      "aspect": "cause",
+      "category": "vague",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "orthwaine vane notes",
+      "facts": [
+        "The orthwaine vane blisters when it is seated against the grain. A orthwaine vane bedded with the specified film will not blister even after several hundred reversals at full stroke.",
+        "Blistering on a orthwaine vane shows first as a matte ring at the outer third. Caught there, a vane seated against the grain can be re-bedded; past that the facing is scrap."
+      ],
+      "notes": [
+        "note-01.md",
+        "note-02.md"
+      ]
+    },
+    {
+      "id": "orthwaine-impeller",
+      "family": "orthwaine",
+      "device": "impeller",
+      "aspect": "torque",
+      "category": "multi-doc",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "how is the orthwaine impeller tensioned",
+      "facts": [
+        "The orthwaine impeller is tensioned to fifteen newton metres, in two passes. A orthwaine impeller taken to full torque in one pass reads correct on the wrench and is still slack across the far side.",
+        "The two passes on a orthwaine impeller are taken at half figure and full figure, working across the diagonal; a impeller tensioned around the circle reaches fifteen newton metres at every point and still pulls oval."
+      ],
+      "notes": [
+        "note-03.md",
+        "note-04.md"
+      ]
+    },
+    {
+      "id": "orthwaine-volute",
+      "family": "orthwaine",
+      "device": "volute",
+      "aspect": "clearance",
+      "category": "single-hop",
+      "phrasing": "natural",
+      "split": "tuning",
+      "query": "what running clearance does the orthwaine volute take",
+      "facts": [
+        "The orthwaine volute takes a running clearance of one point five millimetres. A orthwaine volute closed up tighter than that picks up on the first warm cycle and cannot be freed again without a strip-down."
+      ],
+      "notes": [
+        "note-05.md"
+      ]
+    },
+    {
+      "id": "pyrrhault-diffuser",
+      "family": "pyrrhault",
+      "device": "diffuser",
+      "aspect": "pressure",
+      "category": "multi-doc",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "pyrrhault diffuser cold start pressure",
+      "facts": [
+        "The pyrrhault diffuser holds a cold-start pressure of 66 kilopascal. A crew reads the pyrrhault diffuser before the first pass of a shift, because a diffuser that has drifted more than four kilopascal below that figure will not seat.",
+        "Setting the cold-start pressure on a pyrrhault diffuser is a two-stage job: bring it to 66 kilopascal against a cold line, let it stand a quarter of an hour, then bring it back. A pyrrhault diffuser set in one stage reads correct and falls away before the shift is out.",
+        "One exception is written up for the pyrrhault diffuser: on a line drained and refilled the same day the 66 kilopascal figure is read as an upper bound rather than a target, and the diffuser is left a little under it."
+      ],
+      "notes": [
+        "note-06.md",
+        "note-07.md",
+        "note-08.md"
+      ]
+    },
+    {
+      "id": "pyrrhault-nozzle",
+      "family": "pyrrhault",
+      "device": "nozzle",
+      "aspect": "interval",
+      "category": "single-hop",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "pyrrhault nozzle re-shim interval",
+      "facts": [
+        "The pyrrhault nozzle is re-shimmed every eight hundred cycles. Shimming a pyrrhault nozzle early wastes a wear allowance that is measured over the whole service interval and not over a single week."
+      ],
+      "notes": [
+        "note-09.md"
+      ]
+    },
+    {
+      "id": "quennisford-venturi",
+      "family": "quennisford",
+      "device": "venturi",
+      "aspect": "temperature",
+      "category": "vague",
+      "phrasing": "verbose",
+      "split": "tuning",
+      "query": "someone asked me about the quennisford venturi the other day and I realised I do not actually know what we have written down about it, what is there",
+      "facts": [
+        "The quennisford venturi must stay under seventy-four degrees at the outlet. Above that the quennisford venturi begins to shed its facing, and the loss is not recovered by cooling it back down afterwards."
+      ],
+      "notes": [
+        "note-10.md"
+      ]
+    },
+    {
+      "id": "quennisford-orifice",
+      "family": "quennisford",
+      "device": "orifice",
+      "aspect": "tool",
+      "category": "multi-doc",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "I have the quennisford orifice stripped down in front of me and I am not sure which tool is the right one to release it with, what should I be reaching for",
+      "facts": [
+        "The quennisford orifice is released with a twelve-millimetre offset key. Prying a quennisford orifice with a screwdriver deforms the latch seat, which is the one part of the assembly with no spare.",
+        "The twelve-millimetre offset key is turned against the stop and never past it; a quennisford orifice released past the stop re-latches out of register and has to be stripped before it can be reset."
+      ],
+      "notes": [
+        "note-11.md",
+        "note-12.md"
+      ]
+    },
+    {
+      "id": "ruskelwaite-throttle",
+      "family": "ruskelwaite",
+      "device": "throttle",
+      "aspect": "order",
+      "category": "single-hop",
+      "phrasing": "verbose",
+      "split": "tuning",
+      "query": "before I start bleeding this thing, what is the correct order to bleed the ruskelwaite throttle in, I do not want to trap a pocket at the centre port again",
+      "facts": [
+        "The ruskelwaite throttle is bled after first, then centre, then inboard. Bleeding a ruskelwaite throttle in the reverse order traps a pocket at the centre port that no amount of further bleeding clears."
+      ],
+      "notes": [
+        "note-13.md"
+      ]
+    },
+    {
+      "id": "ruskelwaite-regulator",
+      "family": "ruskelwaite",
+      "device": "regulator",
+      "aspect": "cause",
+      "category": "multi-doc",
+      "phrasing": "misspelled",
+      "split": "tuning",
+      "query": "what casues the ruskelwaite regulator to blister",
+      "facts": [
+        "The ruskelwaite regulator blisters when it is seated without a witness mark. A ruskelwaite regulator bedded with the specified film will not blister even after several hundred reversals at full stroke.",
+        "Blistering on a ruskelwaite regulator shows first as a matte ring at the outer third. Caught there, a regulator seated without a witness mark can be re-bedded; past that the facing is scrap.",
+        "A ruskelwaite regulator that has blistered once is not returned to the same station, because whatever seated it without a witness mark is a property of the station and not of the part."
+      ],
+      "notes": [
+        "note-14.md",
+        "note-15.md",
+        "note-16.md"
+      ]
+    },
+    {
+      "id": "tavenmoor-actuator",
+      "family": "tavenmoor",
+      "device": "actuator",
+      "aspect": "torque",
+      "category": "single-hop",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "how is the tavenmoor actuator tensionned",
+      "facts": [
+        "The tavenmoor actuator is tensioned to twenty-eight newton metres, in two passes. A tavenmoor actuator taken to full torque in one pass reads correct on the wrench and is still slack across the far side."
+      ],
+      "notes": [
+        "note-17.md"
+      ]
+    },
+    {
+      "id": "tavenmoor-linkage",
+      "family": "tavenmoor",
+      "device": "linkage",
+      "aspect": "clearance",
+      "category": "vague",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "anythin I should know about the tavenmoor linkage",
+      "facts": [
+        "The tavenmoor linkage takes a running clearance of nought point three millimetres. A tavenmoor linkage closed up tighter than that picks up on the first warm cycle and cannot be freed again without a strip-down.",
+        "Running clearance on a tavenmoor linkage is measured cold with the shaft at rest; measured turning, a linkage reads under the nought point three millimetre figure and gets closed up further by mistake."
+      ],
+      "notes": [
+        "note-18.md",
+        "note-19.md"
+      ]
+    },
+    {
+      "id": "halbrook-escutcheon",
+      "family": "halbrook",
+      "device": "escutcheon",
+      "aspect": "absent",
+      "category": "unanswerable",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "what clearance does the halbrook escutcheon take when it is refaced",
+      "facts": [],
+      "notes": []
+    },
+    {
+      "id": "ivestrand-quillon",
+      "family": "ivestrand",
+      "device": "quillon",
+      "aspect": "absent",
+      "category": "unanswerable",
+      "phrasing": "terse",
+      "split": "held-out",
+      "query": "ivestrand quillon refacing clearance",
+      "facts": [],
+      "notes": []
+    },
+    {
+      "id": "jarrowmede-mullion",
+      "family": "jarrowmede",
+      "device": "mullion",
+      "aspect": "absent",
+      "category": "unanswerable",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "I have been asked to reface one of these and I cannot find the figure written down anywhere, what clearance is a jarrowmede mullion supposed to end up with",
+      "facts": [],
+      "notes": []
+    },
+    {
+      "id": "kelbourne-barbican",
+      "family": "kelbourne",
+      "device": "barbican",
+      "aspect": "absent",
+      "category": "unanswerable",
+      "phrasing": "misspelled",
+      "split": "held-out",
+      "query": "what clearence does the kelbourne barbican take when it is refaced",
+      "facts": [],
+      "notes": []
+    },
+    {
+      "id": "pyrrhault-trefoil",
+      "family": "pyrrhault",
+      "device": "trefoil",
+      "aspect": "absent",
+      "category": "unanswerable",
+      "phrasing": "natural",
+      "split": "held-out",
+      "query": "what clearance does the pyrrhault trefoil take when it is refaced",
+      "facts": [],
+      "notes": []
+    },
+    {
+      "id": "quennisford-corbel",
+      "family": "quennisford",
+      "device": "corbel",
+      "aspect": "absent",
+      "category": "unanswerable",
+      "phrasing": "terse",
+      "split": "tuning",
+      "query": "quennisford corbel refacing clearance",
+      "facts": [],
+      "notes": []
+    },
+    {
+      "id": "ruskelwaite-finial",
+      "family": "ruskelwaite",
+      "device": "finial",
+      "aspect": "absent",
+      "category": "unanswerable",
+      "phrasing": "verbose",
+      "split": "held-out",
+      "query": "I have been asked to reface one of these and I cannot find the figure written down anywhere, what clearance is a ruskelwaite finial supposed to end up with",
+      "facts": [],
+      "notes": []
+    },
+    {
+      "id": "tavenmoor-voussoir",
+      "family": "tavenmoor",
+      "device": "voussoir",
+      "aspect": "absent",
+      "category": "unanswerable",
+      "phrasing": "misspelled",
+      "split": "tuning",
+      "query": "what clearence does the tavenmoor voussoir take when it is refaced",
+      "facts": [],
+      "notes": []
+    }
+  ],
+  "unanswerable": {
+    "device_nouns": [
+      "escutcheon",
+      "quillon",
+      "mullion",
+      "barbican",
+      "trefoil",
+      "corbel",
+      "finial",
+      "voussoir"
+    ],
+    "construction": "a family noun the corpus is full of, paired with a device noun that occurs nowhere in it: the retriever answers confidently and every rung must still be zero",
+    "queries": [
+      "what clearance does the halbrook escutcheon take when it is refaced",
+      "ivestrand quillon refacing clearance",
+      "I have been asked to reface one of these and I cannot find the figure written down anywhere, what clearance is a jarrowmede mullion supposed to end up with",
+      "what clearence does the kelbourne barbican take when it is refaced",
+      "what clearance does the pyrrhault trefoil take when it is refaced",
+      "quennisford corbel refacing clearance",
+      "I have been asked to reface one of these and I cannot find the figure written down anywhere, what clearance is a ruskelwaite finial supposed to end up with",
+      "what clearence does the tavenmoor voussoir take when it is refaced"
+    ]
+  },
+  "multilingual_probe": {
+    "purpose": "measures the shipped English embedder's vocabulary coverage, not chunk geometry; never aggregated into a profile ranking",
+    "variants": [
+      "en-reference",
+      "de",
+      "ru-cyrillic",
+      "uk-cyrillic",
+      "ru-latin-anchor"
+    ],
+    "base_queries": 12,
+    "entity_transliteration": "mechanical Latin -> Cyrillic; ru-latin-anchor keeps the invented nouns in Latin script so the two Russian variants differ only in the script of the entity",
+    "queries": [
+      {
+        "id": "brenmoor-damper::en-reference",
+        "base_id": "brenmoor-damper",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "what temperature limit applies to the brenmoor damper",
+        "relevant": [
+          "note-03.md"
+        ]
+      },
+      {
+        "id": "brenmoor-damper::de",
+        "base_id": "brenmoor-damper",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "welche Temperaturgrenze gilt für den brenmoor damper",
+        "relevant": [
+          "note-03.md"
+        ]
+      },
+      {
+        "id": "brenmoor-damper::ru-cyrillic",
+        "base_id": "brenmoor-damper",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "какой предел температуры у бренмоор дампер",
+        "relevant": [
+          "note-03.md"
+        ]
+      },
+      {
+        "id": "brenmoor-damper::uk-cyrillic",
+        "base_id": "brenmoor-damper",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "яка межа температури у бренмоор дампер",
+        "relevant": [
+          "note-03.md"
+        ]
+      },
+      {
+        "id": "brenmoor-damper::ru-latin-anchor",
+        "base_id": "brenmoor-damper",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "какой предел температуры у brenmoor damper",
+        "relevant": [
+          "note-03.md"
+        ]
+      },
+      {
+        "id": "brenmoor-governor::en-reference",
+        "base_id": "brenmoor-governor",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "what pressure does the brenmoor governor hold at cold start",
+        "relevant": [
+          "note-00.md"
+        ]
+      },
+      {
+        "id": "brenmoor-governor::de",
+        "base_id": "brenmoor-governor",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "welchen Druck hält der brenmoor governor beim Kaltstart",
+        "relevant": [
+          "note-00.md"
+        ]
+      },
+      {
+        "id": "brenmoor-governor::ru-cyrillic",
+        "base_id": "brenmoor-governor",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "какое давление держит бренмоор говернор при холодном пуске",
+        "relevant": [
+          "note-00.md"
+        ]
+      },
+      {
+        "id": "brenmoor-governor::uk-cyrillic",
+        "base_id": "brenmoor-governor",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "який тиск тримає бренмоор говернор при холодному пуску",
+        "relevant": [
+          "note-00.md"
+        ]
+      },
+      {
+        "id": "brenmoor-governor::ru-latin-anchor",
+        "base_id": "brenmoor-governor",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "какое давление держит brenmoor governor при холодном пуске",
+        "relevant": [
+          "note-00.md"
+        ]
+      },
+      {
+        "id": "brenmoor-manifold::en-reference",
+        "base_id": "brenmoor-manifold",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "how often is the brenmoor manifold re-shimmed",
+        "relevant": [
+          "note-01.md",
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "brenmoor-manifold::de",
+        "base_id": "brenmoor-manifold",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "wie oft wird der brenmoor manifold neu unterlegt",
+        "relevant": [
+          "note-01.md",
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "brenmoor-manifold::ru-cyrillic",
+        "base_id": "brenmoor-manifold",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "как часто обслуживают бренмоор манифолд",
+        "relevant": [
+          "note-01.md",
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "brenmoor-manifold::uk-cyrillic",
+        "base_id": "brenmoor-manifold",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "як часто обслуговують бренмоор манифолд",
+        "relevant": [
+          "note-01.md",
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "brenmoor-manifold::ru-latin-anchor",
+        "base_id": "brenmoor-manifold",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "как часто обслуживают brenmoor manifold",
+        "relevant": [
+          "note-01.md",
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "calvestry-diaphragm::en-reference",
+        "base_id": "calvestry-diaphragm",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "what causes the calvestry diaphragm to blister",
+        "relevant": [
+          "note-08.md"
+        ]
+      },
+      {
+        "id": "calvestry-diaphragm::de",
+        "base_id": "calvestry-diaphragm",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "wodurch bekommt der calvestry diaphragm Blasen",
+        "relevant": [
+          "note-08.md"
+        ]
+      },
+      {
+        "id": "calvestry-diaphragm::ru-cyrillic",
+        "base_id": "calvestry-diaphragm",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "почему на калвестры диафрагм появляются пузыри",
+        "relevant": [
+          "note-08.md"
+        ]
+      },
+      {
+        "id": "calvestry-diaphragm::uk-cyrillic",
+        "base_id": "calvestry-diaphragm",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "чому на калвестры диафрагм з’являються бульбашки",
+        "relevant": [
+          "note-08.md"
+        ]
+      },
+      {
+        "id": "calvestry-diaphragm::ru-latin-anchor",
+        "base_id": "calvestry-diaphragm",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "почему на calvestry diaphragm появляются пузыри",
+        "relevant": [
+          "note-08.md"
+        ]
+      },
+      {
+        "id": "calvestry-escapement::en-reference",
+        "base_id": "calvestry-escapement",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "what is the bleed order for the calvestry escapement",
+        "relevant": [
+          "note-05.md",
+          "note-06.md",
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "calvestry-escapement::de",
+        "base_id": "calvestry-escapement",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "in welcher Reihenfolge wird der calvestry escapement entlüftet",
+        "relevant": [
+          "note-05.md",
+          "note-06.md",
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "calvestry-escapement::ru-cyrillic",
+        "base_id": "calvestry-escapement",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "в каком порядке прокачивают калвестры ескапемент",
+        "relevant": [
+          "note-05.md",
+          "note-06.md",
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "calvestry-escapement::uk-cyrillic",
+        "base_id": "calvestry-escapement",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "у якому порядку прокачують калвестры ескапемент",
+        "relevant": [
+          "note-05.md",
+          "note-06.md",
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "calvestry-escapement::ru-latin-anchor",
+        "base_id": "calvestry-escapement",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "в каком порядке прокачивают calvestry escapement",
+        "relevant": [
+          "note-05.md",
+          "note-06.md",
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "calvestry-rail::en-reference",
+        "base_id": "calvestry-rail",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "what running clearance does the calvestry rail take",
+        "relevant": [
+          "note-11.md"
+        ]
+      },
+      {
+        "id": "calvestry-rail::de",
+        "base_id": "calvestry-rail",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "welches Laufspiel hat der calvestry rail",
+        "relevant": [
+          "note-11.md"
+        ]
+      },
+      {
+        "id": "calvestry-rail::ru-cyrillic",
+        "base_id": "calvestry-rail",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "какой рабочий зазор у калвестры раил",
+        "relevant": [
+          "note-11.md"
+        ]
+      },
+      {
+        "id": "calvestry-rail::uk-cyrillic",
+        "base_id": "calvestry-rail",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "який робочий зазор у калвестры раил",
+        "relevant": [
+          "note-11.md"
+        ]
+      },
+      {
+        "id": "calvestry-rail::ru-latin-anchor",
+        "base_id": "calvestry-rail",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "какой рабочий зазор у calvestry rail",
+        "relevant": [
+          "note-11.md"
+        ]
+      },
+      {
+        "id": "calvestry-wickstay::en-reference",
+        "base_id": "calvestry-wickstay",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "how is the calvestry wickstay tensioned",
+        "relevant": [
+          "note-09.md",
+          "note-10.md"
+        ]
+      },
+      {
+        "id": "calvestry-wickstay::de",
+        "base_id": "calvestry-wickstay",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "wie wird der calvestry wickstay gespannt",
+        "relevant": [
+          "note-09.md",
+          "note-10.md"
+        ]
+      },
+      {
+        "id": "calvestry-wickstay::ru-cyrillic",
+        "base_id": "calvestry-wickstay",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "с каким моментом затягивают калвестры виккстаы",
+        "relevant": [
+          "note-09.md",
+          "note-10.md"
+        ]
+      },
+      {
+        "id": "calvestry-wickstay::uk-cyrillic",
+        "base_id": "calvestry-wickstay",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "з яким моментом затягують калвестры виккстаы",
+        "relevant": [
+          "note-09.md",
+          "note-10.md"
+        ]
+      },
+      {
+        "id": "calvestry-wickstay::ru-latin-anchor",
+        "base_id": "calvestry-wickstay",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "с каким моментом затягивают calvestry wickstay",
+        "relevant": [
+          "note-09.md",
+          "note-10.md"
+        ]
+      },
+      {
+        "id": "dunwidge-trunnion::en-reference",
+        "base_id": "dunwidge-trunnion",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "what tool releases the dunwidge trunnion",
+        "relevant": [
+          "note-18.md",
+          "note-19.md"
+        ]
+      },
+      {
+        "id": "dunwidge-trunnion::de",
+        "base_id": "dunwidge-trunnion",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "welches Werkzeug löst den dunwidge trunnion",
+        "relevant": [
+          "note-18.md",
+          "note-19.md"
+        ]
+      },
+      {
+        "id": "dunwidge-trunnion::ru-cyrillic",
+        "base_id": "dunwidge-trunnion",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "каким инструментом снимают дунвидге труннион",
+        "relevant": [
+          "note-18.md",
+          "note-19.md"
+        ]
+      },
+      {
+        "id": "dunwidge-trunnion::uk-cyrillic",
+        "base_id": "dunwidge-trunnion",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "яким інструментом знімають дунвидге труннион",
+        "relevant": [
+          "note-18.md",
+          "note-19.md"
+        ]
+      },
+      {
+        "id": "dunwidge-trunnion::ru-latin-anchor",
+        "base_id": "dunwidge-trunnion",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "каким инструментом снимают dunwidge trunnion",
+        "relevant": [
+          "note-18.md",
+          "note-19.md"
+        ]
+      },
+      {
+        "id": "eldrache-cleat::en-reference",
+        "base_id": "eldrache-cleat",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "what running clearance does the eldrache cleat take",
+        "relevant": [
+          "note-00.md",
+          "note-01.md",
+          "note-23.md"
+        ]
+      },
+      {
+        "id": "eldrache-cleat::de",
+        "base_id": "eldrache-cleat",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "welches Laufspiel hat der eldrache cleat",
+        "relevant": [
+          "note-00.md",
+          "note-01.md",
+          "note-23.md"
+        ]
+      },
+      {
+        "id": "eldrache-cleat::ru-cyrillic",
+        "base_id": "eldrache-cleat",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "какой рабочий зазор у елдраче клеат",
+        "relevant": [
+          "note-00.md",
+          "note-01.md",
+          "note-23.md"
+        ]
+      },
+      {
+        "id": "eldrache-cleat::uk-cyrillic",
+        "base_id": "eldrache-cleat",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "який робочий зазор у елдраче клеат",
+        "relevant": [
+          "note-00.md",
+          "note-01.md",
+          "note-23.md"
+        ]
+      },
+      {
+        "id": "eldrache-cleat::ru-latin-anchor",
+        "base_id": "eldrache-cleat",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "multi-doc",
+        "split": "held-out",
+        "query": "какой рабочий зазор у eldrache cleat",
+        "relevant": [
+          "note-00.md",
+          "note-01.md",
+          "note-23.md"
+        ]
+      },
+      {
+        "id": "eldrache-gudgeon::en-reference",
+        "base_id": "eldrache-gudgeon",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "what is the bleed order for the eldrache gudgeon",
+        "relevant": [
+          "note-20.md"
+        ]
+      },
+      {
+        "id": "eldrache-gudgeon::de",
+        "base_id": "eldrache-gudgeon",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "in welcher Reihenfolge wird der eldrache gudgeon entlüftet",
+        "relevant": [
+          "note-20.md"
+        ]
+      },
+      {
+        "id": "eldrache-gudgeon::ru-cyrillic",
+        "base_id": "eldrache-gudgeon",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "в каком порядке прокачивают елдраче гудгеон",
+        "relevant": [
+          "note-20.md"
+        ]
+      },
+      {
+        "id": "eldrache-gudgeon::uk-cyrillic",
+        "base_id": "eldrache-gudgeon",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "у якому порядку прокачують елдраче гудгеон",
+        "relevant": [
+          "note-20.md"
+        ]
+      },
+      {
+        "id": "eldrache-gudgeon::ru-latin-anchor",
+        "base_id": "eldrache-gudgeon",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "в каком порядке прокачивают eldrache gudgeon",
+        "relevant": [
+          "note-20.md"
+        ]
+      },
+      {
+        "id": "fennimore-ferrule::en-reference",
+        "base_id": "fennimore-ferrule",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "what tool releases the fennimore ferrule",
+        "relevant": [
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "fennimore-ferrule::de",
+        "base_id": "fennimore-ferrule",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "welches Werkzeug löst den fennimore ferrule",
+        "relevant": [
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "fennimore-ferrule::ru-cyrillic",
+        "base_id": "fennimore-ferrule",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "каким инструментом снимают фенниморе ферруле",
+        "relevant": [
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "fennimore-ferrule::uk-cyrillic",
+        "base_id": "fennimore-ferrule",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "яким інструментом знімають фенниморе ферруле",
+        "relevant": [
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "fennimore-ferrule::ru-latin-anchor",
+        "base_id": "fennimore-ferrule",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "каким инструментом снимают fennimore ferrule",
+        "relevant": [
+          "note-07.md"
+        ]
+      },
+      {
+        "id": "fennimore-shackle::en-reference",
+        "base_id": "fennimore-shackle",
+        "variant": "en-reference",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "what pressure does the fennimore shackle hold at cold start",
+        "relevant": [
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "fennimore-shackle::de",
+        "base_id": "fennimore-shackle",
+        "variant": "de",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "welchen Druck hält der fennimore shackle beim Kaltstart",
+        "relevant": [
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "fennimore-shackle::ru-cyrillic",
+        "base_id": "fennimore-shackle",
+        "variant": "ru-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "какое давление держит фенниморе шаккле при холодном пуске",
+        "relevant": [
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "fennimore-shackle::uk-cyrillic",
+        "base_id": "fennimore-shackle",
+        "variant": "uk-cyrillic",
+        "script": "cyrillic",
+        "entity_script": "cyrillic",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "який тиск тримає фенниморе шаккле при холодному пуску",
+        "relevant": [
+          "note-02.md"
+        ]
+      },
+      {
+        "id": "fennimore-shackle::ru-latin-anchor",
+        "base_id": "fennimore-shackle",
+        "variant": "ru-latin-anchor",
+        "script": "latin",
+        "entity_script": "latin",
+        "category": "single-hop",
+        "split": "held-out",
+        "query": "какое давление держит fennimore shackle при холодном пуске",
+        "relevant": [
+          "note-02.md"
+        ]
+      }
+    ]
+  },
+  "planting": [
+    {
+      "topic": "brenmoor-governor",
+      "source": "note-00.md",
+      "section": "tundra 1",
+      "section_chars_before": 2630,
+      "section_chars_after": 2863
+    },
+    {
+      "topic": "eldrache-cleat",
+      "source": "note-00.md",
+      "section": "moraine 5",
+      "section_chars_before": 2629,
+      "section_chars_after": 2834
+    },
+    {
+      "topic": "ivestrand-brakeshoe",
+      "source": "note-00.md",
+      "section": "scrivener 4",
+      "section_chars_before": 2626,
+      "section_chars_after": 2811
+    },
+    {
+      "topic": "norvellis-baffle",
+      "source": "note-00.md",
+      "section": "hackle 6",
+      "section_chars_before": 2626,
+      "section_chars_after": 2824
+    },
+    {
+      "topic": "brenmoor-manifold",
+      "source": "note-01.md",
+      "section": "kestrel 6",
+      "section_chars_before": 2624,
+      "section_chars_after": 2824
+    },
+    {
+      "topic": "eldrache-cleat",
+      "source": "note-01.md",
+      "section": "quernstone 1",
+      "section_chars_before": 1768,
+      "section_chars_after": 1964
+    },
+    {
+      "topic": "jarrowmede-clevis",
+      "source": "note-01.md",
+      "section": "kestrel 0",
+      "section_chars_before": 1164,
+      "section_chars_after": 1360
+    },
+    {
+      "topic": "orthwaine-vane",
+      "source": "note-01.md",
+      "section": "thatch 3",
+      "section_chars_before": 790,
+      "section_chars_after": 974
+    },
+    {
+      "topic": "brenmoor-manifold",
+      "source": "note-02.md",
+      "section": "harvester 4",
+      "section_chars_before": 2630,
+      "section_chars_after": 2862
+    },
+    {
+      "topic": "fennimore-shackle",
+      "source": "note-02.md",
+      "section": "cadence 5",
+      "section_chars_before": 2630,
+      "section_chars_after": 2862
+    },
+    {
+      "topic": "jarrowmede-yoke",
+      "source": "note-02.md",
+      "section": "drayage 3",
+      "section_chars_before": 1772,
+      "section_chars_after": 1980
+    },
+    {
+      "topic": "orthwaine-vane",
+      "source": "note-02.md",
+      "section": "quartz 6",
+      "section_chars_before": 1166,
+      "section_chars_after": 1341
+    },
+    {
+      "topic": "brenmoor-damper",
+      "source": "note-03.md",
+      "section": "tumbrel 6",
+      "section_chars_before": 2625,
+      "section_chars_after": 2819
+    },
+    {
+      "topic": "fennimore-turnbuckle",
+      "source": "note-03.md",
+      "section": "ashlar 2",
+      "section_chars_before": 2624,
+      "section_chars_after": 2830
+    },
+    {
+      "topic": "jarrowmede-stanchion",
+      "source": "note-03.md",
+      "section": "flotsam 5",
+      "section_chars_before": 1769,
+      "section_chars_after": 2009
+    },
+    {
+      "topic": "orthwaine-impeller",
+      "source": "note-03.md",
+      "section": "quartz 1",
+      "section_chars_before": 1165,
+      "section_chars_after": 1365
+    },
+    {
+      "topic": "brenmoor-buffer",
+      "source": "note-04.md",
+      "section": "ferrite 7",
+      "section_chars_before": 2625,
+      "section_chars_after": 2811
+    },
+    {
+      "topic": "fennimore-turnbuckle",
+      "source": "note-04.md",
+      "section": "spindle 6",
+      "section_chars_before": 1771,
+      "section_chars_after": 2006
+    },
+    {
+      "topic": "jarrowmede-stanchion",
+      "source": "note-04.md",
+      "section": "undertow 0",
+      "section_chars_before": 1769,
+      "section_chars_after": 2044
+    },
+    {
+      "topic": "orthwaine-impeller",
+      "source": "note-04.md",
+      "section": "vestibule 2",
+      "section_chars_before": 1164,
+      "section_chars_after": 1381
+    },
+    {
+      "topic": "calvestry-escapement",
+      "source": "note-05.md",
+      "section": "vestibule 2",
+      "section_chars_before": 2625,
+      "section_chars_after": 2832
+    },
+    {
+      "topic": "fennimore-grommet",
+      "source": "note-05.md",
+      "section": "obsidian 3",
+      "section_chars_before": 1772,
+      "section_chars_after": 1972
+    },
+    {
+      "topic": "jarrowmede-stanchion",
+      "source": "note-05.md",
+      "section": "newel 0",
+      "section_chars_before": 1769,
+      "section_chars_after": 1990
+    },
+    {
+      "topic": "orthwaine-volute",
+      "source": "note-05.md",
+      "section": "quernstone 7",
+      "section_chars_before": 1769,
+      "section_chars_after": 1976
+    },
+    {
+      "topic": "calvestry-escapement",
+      "source": "note-06.md",
+      "section": "thatch 7",
+      "section_chars_before": 1774,
+      "section_chars_after": 1968
+    },
+    {
+      "topic": "fennimore-grommet",
+      "source": "note-06.md",
+      "section": "obsidian 2",
+      "section_chars_before": 1769,
+      "section_chars_after": 1976
+    },
+    {
+      "topic": "kelbourne-bracket",
+      "source": "note-06.md",
+      "section": "culvert 4",
+      "section_chars_before": 1766,
+      "section_chars_after": 1965
+    },
+    {
+      "topic": "pyrrhault-diffuser",
+      "source": "note-06.md",
+      "section": "granite 6",
+      "section_chars_before": 1166,
+      "section_chars_after": 1401
+    },
+    {
+      "topic": "calvestry-escapement",
+      "source": "note-07.md",
+      "section": "oakum 3",
+      "section_chars_before": 2631,
+      "section_chars_after": 2809
+    },
+    {
+      "topic": "fennimore-ferrule",
+      "source": "note-07.md",
+      "section": "marrow 7",
+      "section_chars_before": 2628,
+      "section_chars_after": 2819
+    },
+    {
+      "topic": "kelbourne-sleeve",
+      "source": "note-07.md",
+      "section": "lintel 4",
+      "section_chars_before": 2625,
+      "section_chars_after": 2821
+    },
+    {
+      "topic": "pyrrhault-diffuser",
+      "source": "note-07.md",
+      "section": "tallow 0",
+      "section_chars_before": 1163,
+      "section_chars_after": 1434
+    },
+    {
+      "topic": "calvestry-diaphragm",
+      "source": "note-08.md",
+      "section": "tumbrel 5",
+      "section_chars_before": 2631,
+      "section_chars_after": 2811
+    },
+    {
+      "topic": "gostrelle-collet",
+      "source": "note-08.md",
+      "section": "quorum 0",
+      "section_chars_before": 2625,
+      "section_chars_after": 2821
+    },
+    {
+      "topic": "kelbourne-sleeve",
+      "source": "note-08.md",
+      "section": "claret 1",
+      "section_chars_before": 1769,
+      "section_chars_after": 1972
+    },
+    {
+      "topic": "pyrrhault-diffuser",
+      "source": "note-08.md",
+      "section": "plinth 4",
+      "section_chars_before": 1768,
+      "section_chars_after": 1986
+    },
+    {
+      "topic": "calvestry-wickstay",
+      "source": "note-09.md",
+      "section": "ledger 3",
+      "section_chars_before": 2631,
+      "section_chars_after": 2830
+    },
+    {
+      "topic": "gostrelle-collet",
+      "source": "note-09.md",
+      "section": "yarrow 2",
+      "section_chars_before": 2630,
+      "section_chars_after": 2810
+    },
+    {
+      "topic": "kelbourne-liner",
+      "source": "note-09.md",
+      "section": "ambergris 4",
+      "section_chars_before": 1766,
+      "section_chars_after": 1954
+    },
+    {
+      "topic": "pyrrhault-nozzle",
+      "source": "note-09.md",
+      "section": "ember 7",
+      "section_chars_before": 1168,
+      "section_chars_after": 1367
+    },
+    {
+      "topic": "calvestry-wickstay",
+      "source": "note-10.md",
+      "section": "pergola 1",
+      "section_chars_before": 2629,
+      "section_chars_after": 2845
+    },
+    {
+      "topic": "gostrelle-collet",
+      "source": "note-10.md",
+      "section": "lattice 0",
+      "section_chars_before": 1766,
+      "section_chars_after": 1937
+    },
+    {
+      "topic": "lomasque-hasp",
+      "source": "note-10.md",
+      "section": "flotsam 5",
+      "section_chars_before": 1766,
+      "section_chars_after": 1960
+    },
+    {
+      "topic": "quennisford-venturi",
+      "source": "note-10.md",
+      "section": "cinder 2",
+      "section_chars_before": 1165,
+      "section_chars_after": 1370
+    },
+    {
+      "topic": "calvestry-rail",
+      "source": "note-11.md",
+      "section": "fallow 4",
+      "section_chars_before": 2625,
+      "section_chars_after": 2831
+    },
+    {
+      "topic": "gostrelle-mandrel",
+      "source": "note-11.md",
+      "section": "parapet 3",
+      "section_chars_before": 1766,
+      "section_chars_after": 1950
+    },
+    {
+      "topic": "lomasque-hasp",
+      "source": "note-11.md",
+      "section": "ferrite 0",
+      "section_chars_before": 1161,
+      "section_chars_after": 1344
+    },
+    {
+      "topic": "quennisford-orifice",
+      "source": "note-11.md",
+      "section": "claret 7",
+      "section_chars_before": 792,
+      "section_chars_after": 991
+    },
+    {
+      "topic": "dunwidge-gasket",
+      "source": "note-12.md",
+      "section": "yarrow 0",
+      "section_chars_before": 2627,
+      "section_chars_after": 2854
+    },
+    {
+      "topic": "gostrelle-arbor",
+      "source": "note-12.md",
+      "section": "quernstone 4",
+      "section_chars_before": 1773,
+      "section_chars_after": 1971
+    },
+    {
+      "topic": "lomasque-spigot",
+      "source": "note-12.md",
+      "section": "plinth 7",
+      "section_chars_before": 1772,
+      "section_chars_after": 1946
+    },
+    {
+      "topic": "quennisford-orifice",
+      "source": "note-12.md",
+      "section": "ingot 5",
+      "section_chars_before": 1160,
+      "section_chars_after": 1359
+    },
+    {
+      "topic": "dunwidge-gasket",
+      "source": "note-13.md",
+      "section": "fallow 3",
+      "section_chars_before": 2630,
+      "section_chars_after": 2895
+    },
+    {
+      "topic": "gostrelle-tappet",
+      "source": "note-13.md",
+      "section": "pillar 1",
+      "section_chars_before": 2627,
+      "section_chars_after": 2833
+    },
+    {
+      "topic": "lomasque-spigot",
+      "source": "note-13.md",
+      "section": "marrow 4",
+      "section_chars_before": 2627,
+      "section_chars_after": 2793
+    },
+    {
+      "topic": "ruskelwaite-throttle",
+      "source": "note-13.md",
+      "section": "cobalt 6",
+      "section_chars_before": 1169,
+      "section_chars_after": 1373
+    },
+    {
+      "topic": "dunwidge-flywheel",
+      "source": "note-14.md",
+      "section": "ingot 2",
+      "section_chars_before": 2628,
+      "section_chars_after": 2830
+    },
+    {
+      "topic": "gostrelle-tappet",
+      "source": "note-14.md",
+      "section": "vestibule 5",
+      "section_chars_before": 1165,
+      "section_chars_after": 1361
+    },
+    {
+      "topic": "lomasque-spigot",
+      "source": "note-14.md",
+      "section": "cinder 0",
+      "section_chars_before": 1160,
+      "section_chars_after": 1323
+    },
+    {
+      "topic": "ruskelwaite-regulator",
+      "source": "note-14.md",
+      "section": "culvert 6",
+      "section_chars_before": 793,
+      "section_chars_after": 996
+    },
+    {
+      "topic": "dunwidge-flywheel",
+      "source": "note-15.md",
+      "section": "furrow 0",
+      "section_chars_before": 2627,
+      "section_chars_after": 2861
+    },
+    {
+      "topic": "halbrook-rocker",
+      "source": "note-15.md",
+      "section": "marrow 3",
+      "section_chars_before": 2627,
+      "section_chars_after": 2854
+    },
+    {
+      "topic": "lomasque-bonnet",
+      "source": "note-15.md",
+      "section": "tundra 5",
+      "section_chars_before": 2627,
+      "section_chars_after": 2824
+    },
+    {
+      "topic": "ruskelwaite-regulator",
+      "source": "note-15.md",
+      "section": "coppice 1",
+      "section_chars_before": 1164,
+      "section_chars_after": 1356
+    },
+    {
+      "topic": "dunwidge-flywheel",
+      "source": "note-16.md",
+      "section": "pillar 0",
+      "section_chars_before": 2629,
+      "section_chars_after": 2795
+    },
+    {
+      "topic": "halbrook-camlock",
+      "source": "note-16.md",
+      "section": "trellis 2",
+      "section_chars_before": 2626,
+      "section_chars_after": 2824
+    },
+    {
+      "topic": "mardrenne-bung",
+      "source": "note-16.md",
+      "section": "tallow 4",
+      "section_chars_before": 1167,
+      "section_chars_after": 1369
+    },
+    {
+      "topic": "ruskelwaite-regulator",
+      "source": "note-16.md",
+      "section": "quarry 5",
+      "section_chars_before": 1163,
+      "section_chars_after": 1349
+    },
+    {
+      "topic": "dunwidge-bushing",
+      "source": "note-17.md",
+      "section": "pergola 0",
+      "section_chars_before": 2630,
+      "section_chars_after": 2827
+    },
+    {
+      "topic": "halbrook-camlock",
+      "source": "note-17.md",
+      "section": "coppice 3",
+      "section_chars_before": 2629,
+      "section_chars_after": 2860
+    },
+    {
+      "topic": "mardrenne-bung",
+      "source": "note-17.md",
+      "section": "sallow 1",
+      "section_chars_before": 1770,
+      "section_chars_after": 1962
+    },
+    {
+      "topic": "tavenmoor-actuator",
+      "source": "note-17.md",
+      "section": "culvert 2",
+      "section_chars_before": 1769,
+      "section_chars_after": 1974
+    },
+    {
+      "topic": "dunwidge-trunnion",
+      "source": "note-18.md",
+      "section": "ferrite 0",
+      "section_chars_before": 2628,
+      "section_chars_after": 2815
+    },
+    {
+      "topic": "halbrook-camlock",
+      "source": "note-18.md",
+      "section": "marrow 5",
+      "section_chars_before": 2628,
+      "section_chars_after": 2791
+    },
+    {
+      "topic": "mardrenne-sluice",
+      "source": "note-18.md",
+      "section": "quarry 2",
+      "section_chars_before": 2627,
+      "section_chars_after": 2856
+    },
+    {
+      "topic": "tavenmoor-linkage",
+      "source": "note-18.md",
+      "section": "vestibule 1",
+      "section_chars_before": 1166,
+      "section_chars_after": 1379
+    },
+    {
+      "topic": "dunwidge-trunnion",
+      "source": "note-19.md",
+      "section": "cadmium 7",
+      "section_chars_before": 2630,
+      "section_chars_after": 2819
+    },
+    {
+      "topic": "halbrook-keyway",
+      "source": "note-19.md",
+      "section": "gantry 3",
+      "section_chars_before": 1766,
+      "section_chars_after": 1962
+    },
+    {
+      "topic": "mardrenne-weir",
+      "source": "note-19.md",
+      "section": "alcove 0",
+      "section_chars_before": 1166,
+      "section_chars_after": 1363
+    },
+    {
+      "topic": "tavenmoor-linkage",
+      "source": "note-19.md",
+      "section": "tumbrel 5",
+      "section_chars_before": 1162,
+      "section_chars_after": 1365
+    },
+    {
+      "topic": "eldrache-gudgeon",
+      "source": "note-20.md",
+      "section": "thicket 6",
+      "section_chars_before": 2627,
+      "section_chars_after": 2823
+    },
+    {
+      "topic": "ivestrand-splinebox",
+      "source": "note-20.md",
+      "section": "aperture 1",
+      "section_chars_before": 2625,
+      "section_chars_after": 2821
+    },
+    {
+      "topic": "norvellis-penstock",
+      "source": "note-20.md",
+      "section": "plinth 2",
+      "section_chars_before": 1770,
+      "section_chars_after": 1971
+    },
+    {
+      "topic": "eldrache-ratchet",
+      "source": "note-21.md",
+      "section": "brazier 1",
+      "section_chars_before": 2626,
+      "section_chars_after": 2801
+    },
+    {
+      "topic": "ivestrand-splinebox",
+      "source": "note-21.md",
+      "section": "fathom 2",
+      "section_chars_before": 1770,
+      "section_chars_after": 1966
+    },
+    {
+      "topic": "norvellis-scupper",
+      "source": "note-21.md",
+      "section": "ingot 5",
+      "section_chars_before": 1164,
+      "section_chars_after": 1353
+    },
+    {
+      "topic": "eldrache-pawl",
+      "source": "note-22.md",
+      "section": "pillar 0",
+      "section_chars_before": 2627,
+      "section_chars_after": 2818
+    },
+    {
+      "topic": "ivestrand-drumhead",
+      "source": "note-22.md",
+      "section": "moraine 5",
+      "section_chars_before": 2625,
+      "section_chars_after": 2824
+    },
+    {
+      "topic": "norvellis-scupper",
+      "source": "note-22.md",
+      "section": "mordant 6",
+      "section_chars_before": 1771,
+      "section_chars_after": 1962
+    },
+    {
+      "topic": "eldrache-cleat",
+      "source": "note-23.md",
+      "section": "pillar 7",
+      "section_chars_before": 2629,
+      "section_chars_after": 2823
+    },
+    {
+      "topic": "ivestrand-brakeshoe",
+      "source": "note-23.md",
+      "section": "gantry 1",
+      "section_chars_before": 1772,
+      "section_chars_after": 1948
+    },
+    {
+      "topic": "norvellis-scupper",
+      "source": "note-23.md",
+      "section": "anvil 2",
+      "section_chars_before": 1770,
+      "section_chars_after": 1945
+    }
+  ],
+  "digest": {
+    "algorithm": "sha256, hex, truncated to 16 characters",
+    "files": {
+      "note-00.md": "46028886ecd75267",
+      "note-01.md": "16b35d9f2a5034d7",
+      "note-02.md": "b1cef177b808d23f",
+      "note-03.md": "a36a967ac6c6655b",
+      "note-04.md": "4dbd51f8f68dac40",
+      "note-05.md": "b547cc30ec495188",
+      "note-06.md": "f4c90aeeda275d6f",
+      "note-07.md": "c9e4c5cb09384a0d",
+      "note-08.md": "4c357ef061ca9b2c",
+      "note-09.md": "98dadeac877e9561",
+      "note-10.md": "a3d36c0f54419d4f",
+      "note-11.md": "d43bc0c3ceb77fb3",
+      "note-12.md": "134a415f9360fe63",
+      "note-13.md": "8f12f29cf5493cd2",
+      "note-14.md": "936bb1c6f12e524b",
+      "note-15.md": "df08294b421424fd",
+      "note-16.md": "7755e4b270b799c0",
+      "note-17.md": "fa2aa94eab742970",
+      "note-18.md": "253083ac23f69ff0",
+      "note-19.md": "0c2654f78d2c8c98",
+      "note-20.md": "3192c57aba4a9f57",
+      "note-21.md": "5cb4bc5dc27ed403",
+      "note-22.md": "04dcd55d1a7e9908",
+      "note-23.md": "8f78e3fb0b1e07d5"
+    }
+  }
+}

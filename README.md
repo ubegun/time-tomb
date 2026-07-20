@@ -31,11 +31,16 @@ default. The numbers, the method and the limitations are in
 
 Regenerate all of it from a fresh clone:
 
-    ./install.sh && python bench.py --all --corpus bench/corpus
+    ./install.sh && python bench.py --all --corpus bench/corpus --corpus-quality bench/corpus-quality
 
-That runs the three chunk profiles against `bench/corpus/`, a deterministic
-synthetic corpus committed to this repository together with its labelled query
-set. Each operation has its own sample count — read and delete 100, update 50,
+That runs the three chunk profiles against **two** deterministic synthetic
+corpora, both committed to this repository together with their labelled query
+sets. `bench/corpus/` is the timed one: every latency, cold-start and
+stage-split figure is a property of its seven documents, so it is frozen and
+never grown. `bench/corpus-quality/` is larger — 24 documents — and is read only
+by the untimed scoring, because the 64-query labelled set needs more planting
+slots than the timed corpus has and growing that one would move every latency
+number for no reason. Each operation has its own sample count — read and delete 100, update 50,
 create 20, cold start 5 — and the statistics are gated on it: a percentile is
 rendered only where the sample count supports one, and no P99 is computed
 anywhere. Latency is reported in two named modes, `warm` (many operations in
@@ -43,6 +48,18 @@ one process) and `cold-start` (a fresh subprocess per sample), and the read is
 broken down into query embedding, vector search, materialization and the full
 MCP round-trip. Retrieval is scored both at equal k and under a fixed token
 budget, because equal k is not a fair comparison across chunk sizes.
+
+The labelled set is 64 English queries, and every one of them declares a
+**category** (`single-hop`, `multi-doc`, `vague`, `unanswerable`), a **split**
+(`held-out` or `tuning`) and a **phrasing** (`natural`, `terse`, `verbose`,
+`misspelled`). Scores are reported per category and per split, and the headline
+comparison is computed on the held-out subset only — the three profiles already
+existed when the set was written, so a set that is entirely visible to profile
+selection cannot support a claim about profile selection. Eight unanswerable
+controls must score exactly zero on every rung and under every budget or the
+run fails and writes nothing. A separate multilingual probe measures what the
+shipped English embedder does with German, Russian and Ukrainian queries; it is
+reported on its own and never enters a ranking.
 
 The corpus on disk is checked byte-for-byte against its generator before
 anything is measured, and `BENCHMARKS.md` is rewritten from the result files at
@@ -66,7 +83,8 @@ publishable run.
 | `install.sh` | bootstrap: virtualenv, dependencies, index, manifest, MCP check |
 | `requirements.txt` | pinned dependencies, exactly as measured |
 | `bench.py` | CRUD timing + retrieval-quality harness; also emits the corpus |
-| `bench/corpus/` | the synthetic corpus and `ground-truth.json`, byte-reproducible |
+| `bench/corpus/` | the timed synthetic corpus and `ground-truth.json`, byte-reproducible and frozen |
+| `bench/corpus-quality/` | the larger untimed corpus the 64-query labelled set is planted into |
 | `bench/results/` | one result file per profile per run |
 | `BENCHMARKS.md` | generated from `bench/results/` |
 | `profiles/` | the three chunk profiles the benchmarks compare |
