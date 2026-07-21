@@ -132,6 +132,23 @@ GENERIC_TOKENS = {
     "bench",
     "generated",  # ordinary English ("generated a new salt"), not a topic
     "index",
+    # ``naming`` is ordinary English in both places it is published — "naming
+    # one of them" about percentiles in ``bench.py``, "naming a note's topic"
+    # in this file's own leak-report text. Neither sentence is about a note's
+    # subject, and the second one is the guard describing itself. A
+    # knowledge-base filename began colliding with that vocabulary; as with
+    # ``bench`` above, the guard fired correctly and what it found was a name
+    # collision, not a leak. Notes carrying it stay protected by their other
+    # filename tokens and by the prose probes.
+    "naming",
+    # ``facts`` is a published *schema key*: ``"facts": [...]`` is a field of
+    # ``bench/corpus-quality/ground-truth.json``, it is the ``facts=`` argument
+    # threaded through the corpus builder in ``bench.py``, and it is the unit
+    # ``BENCHMARKS.md`` counts in ("18 planted facts", "92 planted facts").
+    # Like ``bench``, it cannot be reworded out of the published set — a shipped
+    # JSON field name is part of the artefact's contract — so it cannot function
+    # as a leak signal.
+    "facts",
     "search",
     "manifest",
     "notes",
