@@ -1,8 +1,8 @@
 {
   "algo": "sha256(salt||value)[:16]",
-  "chunk_count": 42,
-  "file_count": 7,
-  "root": "34eab582296f42d9",
+  "chunk_count": 51,
+  "file_count": 9,
+  "root": "0ca93b70df84e772",
   "tree": [
     {
       "hash": "f6aa9a0fcf4c719d",
@@ -60,6 +60,18 @@
       ]
     },
     {
+      "hash": "10f53abca821f328",
+      "key": "be7ced30ceb00266",
+      "leaf_count": 5,
+      "leaves": [
+        "b424372150add57a",
+        "4026d9e24507a0e6",
+        "be7181f2052e54c7",
+        "7313489d0d6a0dd6",
+        "04237ddf576b8762"
+      ]
+    },
+    {
       "hash": "50183344366c562f",
       "key": "ae7b44459fda39fc",
       "leaf_count": 4,
@@ -68,6 +80,17 @@
         "c0b2debc034de27a",
         "6e4a3c16fc573973",
         "804b193da031c94a"
+      ]
+    },
+    {
+      "hash": "036e63369689d62d",
+      "key": "018faf4532636c8d",
+      "leaf_count": 4,
+      "leaves": [
+        "43b5694c12fe6d16",
+        "3e9fa4925ff2a796",
+        "eb6c942526d25c49",
+        "21a51ea91111a8bf"
       ]
     },
     {
