@@ -562,8 +562,16 @@ def get_collection(
     create: bool = True,
     name: Optional[str] = None,
     embedding_function=None,
+    client=None,
 ):
     """The collection handle, with the local ONNX embedder attached.
+
+    ``client`` lets a caller that already holds a client reuse it instead of
+    building a second one. Two ``PersistentClient`` instances on the same path
+    are distinct objects that share one internal ``System``, and therefore one
+    collection cache, so state written through one is resolved against cached
+    state in the other. Passing the client through keeps a caller's whole
+    sequence on a single cache.
 
     ``embedding_function`` exists for callers that must *time* the embedder.
     Each ONNX embedding function instance caches its own model and ONNX session
@@ -573,7 +581,7 @@ def get_collection(
     the already-warmed instance in makes that cost visible where it was paid.
     Default ``None`` is the existing behaviour, unchanged.
     """
-    client = get_client()
+    client = client or get_client()
     name = name or COLLECTION_NAME
     if embedding_function is None:
         embedding_function = _embedding_function()
@@ -607,7 +615,18 @@ def reindex(
         except Exception:
             pass  # nothing to drop on a first run
 
-    collection = get_collection(name=name, embedding_function=embedding_function)
+    # Re-created through the *same* client that issued the drop. A second
+    # PersistentClient on this path is a distinct object sharing the first one's
+    # System-level collection cache, so a get_or_create issued through it is
+    # resolved against that shared state and can hand back the dropped
+    # collection's UUID; the upsert below then fails with "Collection [uuid]
+    # does not exist". Whether the cache returns the dead UUID or a fresh one
+    # varies by platform and binding, so the drop and the re-create are kept on
+    # one cache-invalidation path rather than left to that race.
+    collection = get_collection(
+        name=name, embedding_function=embedding_function, client=client
+    )
+
     chunks = collect_chunks(config=config, source=source)
     sources = sorted({c.source for c in chunks})
 
