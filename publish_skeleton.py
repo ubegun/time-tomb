@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """Rebuild the publishing sandbox: skeleton only, never the body.
 
-The sandbox (``rag/rag-skeleton``) is a real clone of the public repository.
+The sandbox (``rag/rag-skeleton``) is a real clone of the public Time Tomb
+repository. The directory name predates the rename and is left alone on
+purpose: it is a local path, not the project's identity.
 This script makes its working tree exactly match what may be published and
 nothing else.
 

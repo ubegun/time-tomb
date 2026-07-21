@@ -1,4 +1,7 @@
-# rag-skeleton
+# Time Tomb
+
+A Time Tomb for a knowledge base: the repo is public proof the knowledge
+exists and when; the body stays sealed on the owner's machine.
 
 A local-first RAG (retrieval-augmented generation) toolkit with a split
 publishing model: the **skeleton** — a salted Merkle manifest plus all

@@ -66,6 +66,11 @@ log = get_logger("manifest")
 
 HASH_LEN = 16  # hex chars kept from each sha256
 MANIFEST_VERSION = 1
+# Frozen historical seed; renaming moves every manifest hash — must not change.
+# It keeps the project's old name ("rag-skeleton") on purpose: this byte string
+# feeds every empty-subtree hash, so editing it would move the published
+# manifest root while nothing about the body had changed. A rename is not a
+# content revision, and the commit history must not claim it was one.
 EMPTY = hashlib.sha256(b"rag-skeleton/empty").hexdigest()[:HASH_LEN]
 
 # Exit codes. 3 exists so that "this configuration is not allowed to speak for
