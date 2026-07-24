@@ -190,7 +190,18 @@ __pycache__/
 """
 
 _HEX32 = re.compile(r"\b[0-9a-fA-F]{64}\b")  # a 256-bit salt, hex-encoded
-_LOCAL_PATH = re.compile(r"/Users/[A-Za-z0-9._-]+")
+_LOCAL_PATH = re.compile(r"(?:/Users|/home)/[A-Za-z0-9._-]+")
+
+# Machine identity: the shapes a real person or device takes when it leaks
+# into published text. Hostnames (mDNS ``.local``), e-mail addresses, and
+# RFC-1918 LAN addresses are refused outright — publishable text has no
+# legitimate use for any of them.
+_HOSTNAME_LOCAL = re.compile(r"\b[A-Za-z0-9][A-Za-z0-9-]*\.local\b")
+_EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b")
+_LAN_IP = re.compile(
+    r"\b(?:192\.168|10\.[0-9]{1,3}|172\.(?:1[6-9]|2[0-9]|3[01]))"
+    r"\.[0-9]{1,3}\.[0-9]{1,3}\b"
+)
 
 # A published requirements file may contain comments, blank lines, plain
 # ``name==version`` pins and hashes. It may not reach outside the package index:
@@ -343,6 +354,15 @@ def scan_content(path: Path, probes: Optional[List[str]] = None) -> List[str]:
 
     for match in _LOCAL_PATH.findall(text):
         problems.append("contains a local absolute path (%s)" % match)
+
+    for match in _HOSTNAME_LOCAL.findall(text):
+        problems.append("contains an mDNS hostname (%s)" % match)
+
+    for match in _EMAIL.findall(text):
+        problems.append("contains an e-mail address (%s)" % match)
+
+    for match in _LAN_IP.findall(text):
+        problems.append("contains a LAN address (%s)" % match)
 
     for probe in probes if probes is not None else _kb_probes():
         if probe in text:
